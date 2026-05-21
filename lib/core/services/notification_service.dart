@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -251,6 +252,45 @@ class NotificationService {
         return 20; // 8:00 PM
       default:
         return 8;
+    }
+  }
+
+  /// Instantly show high-priority emergency SOS alarm notification
+  Future<void> showEmergencySOSNotification() async {
+    if (kIsWeb) {
+      debugPrint('Web: Mock emergency SOS notification triggered.');
+      return;
+    }
+
+    await init();
+    try {
+      await _localNotifications.show(
+        999, // Static SOS alert notification ID
+        '🔴 CRITICAL EMERGENCY SOS ACTIVE',
+        'Emergency SOS has been triggered! Tap to open details and location control.',
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'maatricare_emergency_alarm_channel',
+            'Emergency Alerts',
+            channelDescription: 'Channel for maternal high-priority emergency alarms',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000]),
+            category: AndroidNotificationCategory.alarm,
+            fullScreenIntent: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+            sound: 'default',
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error showing emergency SOS notification: $e');
     }
   }
 }

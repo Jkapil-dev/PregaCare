@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'bottom_nav.dart';
 import 'app_router.dart';
-import '../theme/colors.dart';
+import '../widgets/sos_floating_button.dart';
+import '../widgets/emergency_overlay.dart';
 
 /// Main app shell with bottom navigation and persistent SOS FAB
 class AppShell extends StatelessWidget {
@@ -44,19 +45,21 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentIndex = _getCurrentIndex(context);
 
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: MaatriBottomNav(
-        currentIndex: currentIndex,
-        onTap: (index) => _onTabTap(context, index),
-      ),
-      floatingActionButton: FloatingActionButton.small(
-        heroTag: 'sos_fab',
-        onPressed: () => context.push(AppRoutes.emergency),
-        backgroundColor: MaatriColors.danger,
-        child: const Icon(Icons.emergency_rounded, color: Colors.white, size: 20),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.miniEndTop,
+    return Stack(
+      children: [
+        Scaffold(
+          body: child,
+          bottomNavigationBar: MaatriBottomNav(
+            currentIndex: currentIndex,
+            onTap: (index) => _onTabTap(context, index),
+          ),
+          floatingActionButton: const SOSFloatingActionButton(),
+          floatingActionButtonLocation: FloatingActionButtonLocation.miniEndTop,
+        ),
+        
+        // Full screen critical emergency overlay
+        const EmergencyOverlay(),
+      ],
     );
   }
 }

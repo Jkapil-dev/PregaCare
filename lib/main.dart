@@ -12,6 +12,8 @@ import 'core/providers/mood_provider.dart';
 import 'core/providers/journal_provider.dart';
 import 'core/providers/appointment_provider.dart';
 import 'core/providers/record_provider.dart';
+import 'core/providers/emergency_provider.dart';
+import 'core/providers/location_provider.dart';
 import 'package:go_router/go_router.dart';
 
 void main() async {
@@ -52,6 +54,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => JournalProvider()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => RecordProvider()),
+        ChangeNotifierProvider(create: (_) => EmergencyProvider()),
+        ChangeNotifierProvider(create: (_) => LocationProvider()),
       ],
       child: const MaatriCareApp(),
     ),
