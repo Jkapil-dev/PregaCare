@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
+import 'package:maatricare/core/providers/user_provider.dart';
 
 class BabyMonitoringPage extends StatefulWidget {
   const BabyMonitoringPage({super.key});
@@ -18,13 +20,11 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
   bool _isCountingKicks = false;
   int _kickSeconds = 0;
   Timer? _kickTimer;
-  final List<String> _kickLogs = ['10 kicks in 45 mins (Yesterday)', '8 kicks in 30 mins (2 days ago)'];
 
   // Contraction Timer State
   bool _isContractionActive = false;
   int _contractionSeconds = 0;
   Timer? _contractionTimer;
-  final List<_ContractionLog> _contractionLogs = [];
   DateTime? _lastContractionTime;
 
   @override
@@ -58,18 +58,20 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
 
   void _stopKickSession({bool completed = false}) {
     _kickTimer?.cancel();
+    if (completed) {
+      final mins = _kickSeconds ~/ 60;
+      final secs = _kickSeconds % 60;
+      final logStr = '10 kicks in $mins mins $secs secs (Just Now)';
+      Provider.of<UserProvider>(context, listen: false).addKickLog(logStr);
+    }
     setState(() {
       _isCountingKicks = false;
-      if (completed) {
-        final mins = _kickSeconds ~/ 60;
-        final secs = _kickSeconds % 60;
-        _kickLogs.insert(0, '10 kicks in $mins mins $secs secs (Just Now)');
-      }
     });
   }
 
   // ── Contraction Timer Functions ──
   void _toggleContraction() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     if (_isContractionActive) {
       // Stop contraction and save log
       _contractionTimer?.cancel();
@@ -80,15 +82,11 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
         frequency = '${diff.inMinutes} mins ago';
       }
 
+      final durSecs = _contractionSeconds;
+      final startTimeStr = (_lastContractionTime ?? now.subtract(Duration(seconds: durSecs))).toIso8601String();
+      userProvider.addContractionLog(durSecs, startTimeStr, frequency);
+
       setState(() {
-        _contractionLogs.insert(
-          0,
-          _ContractionLog(
-            durationSeconds: _contractionSeconds,
-            startTime: _lastContractionTime ?? now.subtract(Duration(seconds: _contractionSeconds)),
-            frequency: frequency,
-          ),
-        );
         _isContractionActive = false;
         _contractionSeconds = 0;
       });
@@ -113,6 +111,7 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       appBar: AppBar(
@@ -133,15 +132,15 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
             const SizedBox(height: MaatriTheme.spacingLg),
 
             // ── BABY GROWTH PREVIEW ──
-            _buildGrowthSection(),
+            _buildGrowthSection(userProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── KICK COUNTER ──
-            _buildKickCounterSection(),
+            _buildKickCounterSection(userProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── CONTRACTION TIMER ──
-            _buildContractionTimerSection(),
+            _buildContractionTimerSection(userProvider),
             const SizedBox(height: MaatriTheme.spacingXxl),
           ],
         ),
@@ -149,7 +148,14 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
     );
   }
 
-  Widget _buildGrowthSection() {
+  Widget _buildGrowthSection(UserProvider userProvider) {
+    final stats = userProvider.weeklyDevelopmentStats;
+    final week = userProvider.pregnancyWeek;
+    final size = stats['size'] ?? 'Watermelon 🍉';
+    final weight = stats['weight'] ?? '3.5kg';
+    final length = stats['length'] ?? '51.2cm';
+    final desc = stats['description'] ?? '';
+
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -168,11 +174,11 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Week 24 Growth', style: MaatriTypography.titleMedium),
+                Text('Week $week Growth', style: MaatriTypography.titleMedium),
                 const SizedBox(height: 2),
-                Text('Baby is the size of an Eggplant 🍆', style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.coral, fontWeight: FontWeight.bold)),
+                Text('Baby is the size of $size', style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.coral, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text('Weight is about 600g and length is around 30cm. Senses are developing rapidly!', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
+                Text('Weight is about $weight and length is around $length. $desc', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
               ],
             ),
           ),
@@ -181,7 +187,8 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
     );
   }
 
-  Widget _buildKickCounterSection() {
+  Widget _buildKickCounterSection(UserProvider userProvider) {
+    final kickLogs = userProvider.kickLogs;
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -248,13 +255,13 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
                 ),
               ],
             ),
-          if (_kickLogs.isNotEmpty) ...[
+          if (kickLogs.isNotEmpty) ...[
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 6),
             Text('Movement Log history:', style: MaatriTypography.labelMedium),
             const SizedBox(height: 6),
-            ..._kickLogs.take(2).map((log) => Padding(
+            ...kickLogs.take(2).map((log) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
                 children: [
@@ -270,7 +277,8 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
     );
   }
 
-  Widget _buildContractionTimerSection() {
+  Widget _buildContractionTimerSection(UserProvider userProvider) {
+    final contractionLogs = userProvider.contractionLogs;
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -310,19 +318,19 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
               ),
             ],
           ),
-          if (_contractionLogs.isNotEmpty) ...[
+          if (contractionLogs.isNotEmpty) ...[
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
             Text('Contraction Log History:', style: MaatriTypography.labelMedium),
             const SizedBox(height: 6),
-            ..._contractionLogs.take(3).map((log) => Padding(
+            ...contractionLogs.take(3).map((log) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Duration: ${log.durationSeconds}s', style: MaatriTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                  Text('Freq: ${log.frequency}', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
+                  Text('Duration: ${log['durationSeconds']}s', style: MaatriTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                  Text('Freq: ${log['frequency']}', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
                 ],
               ),
             )),
@@ -331,16 +339,4 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
       ),
     );
   }
-}
-
-class _ContractionLog {
-  final int durationSeconds;
-  final DateTime startTime;
-  final String frequency;
-
-  _ContractionLog({
-    required this.durationSeconds,
-    required this.startTime,
-    required this.frequency,
-  });
 }

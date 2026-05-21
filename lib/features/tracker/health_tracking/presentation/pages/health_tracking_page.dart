@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
+import 'package:maatricare/core/providers/user_provider.dart';
 
 class HealthTrackingPage extends StatefulWidget {
   const HealthTrackingPage({super.key});
@@ -12,32 +14,34 @@ class HealthTrackingPage extends StatefulWidget {
 }
 
 class _HealthTrackingPageState extends State<HealthTrackingPage> {
-  // Blood Pressure
-  String _bpSys = '120';
-  String _bpDia = '80';
-  final List<String> _bpHistory = ['120/80 mmHg (Today)', '118/79 mmHg (2 days ago)'];
-
-  // Water
-  int _waterGlasses = 5;
+  late TextEditingController _bpSysController;
+  late TextEditingController _bpDiaController;
+  bool _controllersInitialized = false;
   static const int _waterGoal = 10;
 
-  // Sleep
-  double _sleepHours = 7.5;
+  @override
+  void initState() {
+    super.initState();
+    _bpSysController = TextEditingController();
+    _bpDiaController = TextEditingController();
+  }
 
-  // Temperature
-  double _temperature = 36.8;
-
-  // Symptoms
-  final Map<String, bool> _symptoms = {
-    'Morning Sickness': true,
-    'Fatigue': false,
-    'Backache': true,
-    'Headache': false,
-    'Swollen Ankles': false,
-  };
+  @override
+  void dispose() {
+    _bpSysController.dispose();
+    _bpDiaController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    if (!_controllersInitialized) {
+      _bpSysController.text = userProvider.bpSys;
+      _bpDiaController.text = userProvider.bpDia;
+      _controllersInitialized = true;
+    }
+
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       appBar: AppBar(
@@ -58,23 +62,23 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             const SizedBox(height: MaatriTheme.spacingLg),
 
             // ── BLOOD PRESSURE ──
-            _buildBPSection(),
+            _buildBPSection(userProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── WATER INTAKE ──
-            _buildWaterSection(),
+            _buildWaterSection(userProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── SLEEP TRACKER ──
-            _buildSleepSection(),
+            _buildSleepSection(userProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── SYMPTOMS LOGGER ──
-            _buildSymptomsSection(),
+            _buildSymptomsSection(userProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── TEMPERATURE ──
-            _buildTemperatureSection(),
+            _buildTemperatureSection(userProvider),
             const SizedBox(height: MaatriTheme.spacingXxl),
           ],
         ),
@@ -82,7 +86,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
     );
   }
 
-  Widget _buildBPSection() {
+  Widget _buildBPSection(UserProvider userProvider) {
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -108,8 +112,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
                 child: TextField(
                   decoration: const InputDecoration(labelText: 'Systolic (SYS)', suffixText: 'mmHg'),
                   keyboardType: TextInputType.number,
-                  onChanged: (val) => _bpSys = val,
-                  controller: TextEditingController(text: _bpSys),
+                  controller: _bpSysController,
                 ),
               ),
               const SizedBox(width: 16),
@@ -117,8 +120,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
                 child: TextField(
                   decoration: const InputDecoration(labelText: 'Diastolic (DIA)', suffixText: 'mmHg'),
                   keyboardType: TextInputType.number,
-                  onChanged: (val) => _bpDia = val,
-                  controller: TextEditingController(text: _bpDia),
+                  controller: _bpDiaController,
                 ),
               ),
             ],
@@ -127,24 +129,24 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _bpHistory.insert(0, '$_bpSys/$_bpDia mmHg (Just Now)');
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Blood Pressure updated!'), backgroundColor: MaatriColors.success),
-                );
+              onPressed: () async {
+                await userProvider.addBPLog(_bpSysController.text, _bpDiaController.text);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Blood Pressure updated!'), backgroundColor: MaatriColors.success),
+                  );
+                }
               },
               child: const Text('Save BP Log'),
             ),
           ),
-          if (_bpHistory.isNotEmpty) ...[
+          if (userProvider.bpHistory.isNotEmpty) ...[
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 6),
             Text('Recent Logs:', style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.charcoal)),
             const SizedBox(height: 4),
-            ..._bpHistory.take(2).map((log) => Padding(
+            ...userProvider.bpHistory.take(2).map((log) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -160,7 +162,8 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
     );
   }
 
-  Widget _buildWaterSection() {
+  Widget _buildWaterSection(UserProvider userProvider) {
+    final glasses = userProvider.waterGlasses;
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -176,7 +179,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
               const SizedBox(width: 10),
               Text('Water Intake', style: MaatriTypography.titleMedium),
               const Spacer(),
-              Text('$_waterGlasses / $_waterGoal Glasses', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.teal)),
+              Text('$glasses / $_waterGoal Glasses', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.teal)),
             ],
           ),
           const SizedBox(height: 16),
@@ -184,7 +187,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: _waterGlasses / _waterGoal,
+              value: (glasses / _waterGoal).clamp(0.0, 1.0),
               minHeight: 8,
               backgroundColor: MaatriColors.lightGray,
               valueColor: const AlwaysStoppedAnimation<Color>(MaatriColors.teal),
@@ -196,12 +199,12 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.remove_circle_outline_rounded, size: 28, color: MaatriColors.mediumGray),
-                onPressed: _waterGlasses > 0 ? () => setState(() => _waterGlasses--) : null,
+                onPressed: glasses > 0 ? () => userProvider.updateWaterGlasses(glasses - 1) : null,
               ),
-              Text('$_waterGlasses glasses', style: MaatriTypography.headlineSmall),
+              Text('$glasses glasses', style: MaatriTypography.headlineSmall),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 28, color: MaatriColors.teal),
-                onPressed: _waterGlasses < _waterGoal * 2 ? () => setState(() => _waterGlasses++) : null,
+                onPressed: glasses < _waterGoal * 2 ? () => userProvider.updateWaterGlasses(glasses + 1) : null,
               ),
             ],
           ),
@@ -210,7 +213,8 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
     );
   }
 
-  Widget _buildSleepSection() {
+  Widget _buildSleepSection(UserProvider userProvider) {
+    final sleep = userProvider.sleepHours;
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -226,23 +230,23 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
               const SizedBox(width: 10),
               Text('Sleep Log', style: MaatriTypography.titleMedium),
               const Spacer(),
-              Text('${_sleepHours.toStringAsFixed(1)} hrs', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.lavenderDark)),
+              Text('${sleep.toStringAsFixed(1)} hrs', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.lavenderDark)),
             ],
           ),
           const SizedBox(height: 8),
           Slider(
-            value: _sleepHours,
+            value: sleep.clamp(2.0, 14.0),
             min: 2,
             max: 14,
             divisions: 24,
             activeColor: MaatriColors.lavenderDark,
             inactiveColor: MaatriColors.lightGray,
-            onChanged: (val) => setState(() => _sleepHours = val),
+            onChanged: (val) => userProvider.updateSleepHours(val),
           ),
           Center(
             child: Text(
-              _sleepHours >= 8 ? 'Excellent Rest! 😴' : 'Try to get 8 hours of sleep.',
-              style: MaatriTypography.labelSmall.copyWith(color: _sleepHours >= 8 ? MaatriColors.success : MaatriColors.goldenAmber),
+              sleep >= 8 ? 'Excellent Rest! 😴' : 'Try to get 8 hours of sleep.',
+              style: MaatriTypography.labelSmall.copyWith(color: sleep >= 8 ? MaatriColors.success : MaatriColors.goldenAmber),
             ),
           ),
         ],
@@ -250,7 +254,8 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
     );
   }
 
-  Widget _buildSymptomsSection() {
+  Widget _buildSymptomsSection(UserProvider userProvider) {
+    final symptoms = userProvider.symptoms;
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -271,16 +276,14 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _symptoms.keys.map((symptom) {
-              final active = _symptoms[symptom]!;
+            children: symptoms.keys.map((symptom) {
+              final active = symptoms[symptom]!;
               return FilterChip(
                 label: Text(symptom),
                 selected: active,
                 selectedColor: MaatriColors.goldenAmber.withValues(alpha: 0.15),
                 checkmarkColor: MaatriColors.goldenAmber,
-                onSelected: (val) {
-                  setState(() => _symptoms[symptom] = val);
-                },
+                onSelected: (val) => userProvider.updateSymptom(symptom, val),
               );
             }).toList(),
           ),
@@ -289,7 +292,8 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
     );
   }
 
-  Widget _buildTemperatureSection() {
+  Widget _buildTemperatureSection(UserProvider userProvider) {
+    final temp = userProvider.temperature;
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -305,7 +309,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
               const SizedBox(width: 10),
               Text('Body Temperature', style: MaatriTypography.titleMedium),
               const Spacer(),
-              Text('${_temperature.toStringAsFixed(1)} °C', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.coral)),
+              Text('${temp.toStringAsFixed(1)} °C', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.coral)),
             ],
           ),
           const SizedBox(height: 12),
@@ -313,16 +317,16 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               ElevatedButton(
-                onPressed: () => setState(() => _temperature -= 0.1),
+                onPressed: () => userProvider.updateTemperature(temp - 0.1),
                 style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.lightGray, foregroundColor: MaatriColors.charcoal),
                 child: const Icon(Icons.remove, size: 16),
               ),
               Text(
-                _temperature > 37.5 ? 'Slight Fever ⚠️' : 'Normal Temp ✓',
-                style: MaatriTypography.bodyMedium.copyWith(color: _temperature > 37.5 ? MaatriColors.danger : MaatriColors.success),
+                temp > 37.5 ? 'Slight Fever ⚠️' : 'Normal Temp ✓',
+                style: MaatriTypography.bodyMedium.copyWith(color: temp > 37.5 ? MaatriColors.danger : MaatriColors.success),
               ),
               ElevatedButton(
-                onPressed: () => setState(() => _temperature += 0.1),
+                onPressed: () => userProvider.updateTemperature(temp + 0.1),
                 style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.lightGray, foregroundColor: MaatriColors.charcoal),
                 child: const Icon(Icons.add, size: 16),
               ),

@@ -22,6 +22,23 @@ class MedicineProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  double get adherenceRate {
+    int totalScheduled = 0;
+    int totalTaken = 0;
+    for (final med in _medicines) {
+      for (final dateLogs in med.adherenceLogs.values) {
+        for (final status in dateLogs.values) {
+          totalScheduled++;
+          if (status == 'Taken') {
+            totalTaken++;
+          }
+        }
+      }
+    }
+    if (totalScheduled == 0) return 1.0;
+    return totalTaken / totalScheduled;
+  }
+
   void _init() {
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user != null) {

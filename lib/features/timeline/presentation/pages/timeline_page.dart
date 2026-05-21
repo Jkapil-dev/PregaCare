@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/providers/user_provider.dart';
 
 class TimelinePage extends StatelessWidget {
   const TimelinePage({super.key});
-  static const _currentWeek = 24;
+
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final currentWeek = userProvider.pregnancyWeek;
+
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       appBar: AppBar(title: const Text('Pregnancy Timeline'), leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context))),
       body: ListView.builder(padding: const EdgeInsets.all(16), itemCount: 40, itemBuilder: (c, i) {
         final week = i + 1;
-        final isCurrent = week == _currentWeek;
-        final isPast = week < _currentWeek;
+        final isCurrent = week == currentWeek;
+        final isPast = week < currentWeek;
         final trimester = week <= 12 ? 1 : week <= 27 ? 2 : 3;
         return _buildWeekItem(context, week, isCurrent, isPast, trimester);
       }),

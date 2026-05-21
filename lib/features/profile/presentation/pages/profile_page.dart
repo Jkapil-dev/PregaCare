@@ -7,6 +7,7 @@ import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../core/providers/user_provider.dart';
+import '../../../../core/providers/appointment_provider.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -29,6 +30,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final userProvider = context.watch<UserProvider>();
+    final apptProvider = context.watch<AppointmentProvider>();
     final displayName = userProvider.displayName.isNotEmpty
         ? userProvider.displayName
         : (userProvider.email.isNotEmpty ? userProvider.email.split('@')[0] : 'Guest User');
@@ -52,11 +54,11 @@ class ProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              _StatBadge(label: 'BP Logs', value: '24'),
+              _StatBadge(label: 'BP Logs', value: '${userProvider.bpHistory.length}'),
               const SizedBox(width: 16),
-              _StatBadge(label: 'ANC Visits', value: '5'),
+              _StatBadge(label: 'ANC Visits', value: '${apptProvider.appointments.length}'),
               const SizedBox(width: 16),
-              _StatBadge(label: 'Streak', value: '12d'),
+              _StatBadge(label: 'Streak', value: '${userProvider.streak}d'),
             ]),
           ]),
         ),

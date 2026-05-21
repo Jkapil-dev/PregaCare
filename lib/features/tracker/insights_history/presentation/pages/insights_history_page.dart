@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
+import 'package:maatricare/core/providers/user_provider.dart';
+import 'package:maatricare/core/providers/medicine_provider.dart';
+import 'package:maatricare/core/providers/mood_provider.dart';
 
 class InsightsHistoryPage extends StatelessWidget {
   const InsightsHistoryPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final medProvider = Provider.of<MedicineProvider>(context);
+    final moodProvider = Provider.of<MoodProvider>(context);
+
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       appBar: AppBar(
@@ -29,19 +37,19 @@ class InsightsHistoryPage extends StatelessWidget {
             const SizedBox(height: MaatriTheme.spacingLg),
 
             // ── AI INSIGHTS CARD ──
-            _buildAIInsights(),
+            _buildAIInsights(userProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── MEDICATION ADHERENCE CARD ──
-            _buildAdherenceCard(),
+            _buildAdherenceCard(medProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── SYMPTOM FREQUENCY ──
-            _buildSymptomFrequencyCard(),
+            _buildSymptomFrequencyCard(userProvider),
             const SizedBox(height: MaatriTheme.spacingMd),
 
             // ── MOOD ANALYTICS ──
-            _buildMoodAnalyticsCard(),
+            _buildMoodAnalyticsCard(moodProvider),
             const SizedBox(height: MaatriTheme.spacingXxl),
           ],
         ),
@@ -49,7 +57,28 @@ class InsightsHistoryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAIInsights() {
+  Widget _buildAIInsights(UserProvider userProvider) {
+    final week = userProvider.pregnancyWeek;
+    final water = userProvider.waterGlasses;
+    final symptomsMap = userProvider.symptoms;
+    final activeSymptoms = symptomsMap.entries.where((e) => e.value).map((e) => e.key).toList();
+    
+    String symptomStr = '';
+    if (activeSymptoms.isEmpty) {
+      symptomStr = 'You have logged no symptoms today, which is excellent.';
+    } else {
+      symptomStr = 'You have logged some symptoms today: ${activeSymptoms.join(", ")}.';
+    }
+
+    String advice = '';
+    if (water < 8) {
+      advice = 'Your daily water intake is $water glasses, which is below the target. Hydration is crucial for amniotic fluid levels; try to drink at least 8-10 glasses.';
+    } else {
+      advice = 'Great job staying hydrated with $water glasses of water today!';
+    }
+
+    final fullInsight = '"For Week $week, $symptomStr $advice"';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -70,7 +99,7 @@ class InsightsHistoryPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '"Your body weight trends show ideal, healthy progression for Week 24. However, you logged morning sickness twice this week. Consider drinking ginger tea and increasing water intake to 10 glasses to maintain optimal amniotic fluids."',
+            fullInsight,
             style: MaatriTypography.bodyMedium.copyWith(color: Colors.white.withValues(alpha: 0.95), height: 1.4, fontStyle: FontStyle.italic),
           ),
         ],
@@ -78,7 +107,17 @@ class InsightsHistoryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAdherenceCard() {
+  Widget _buildAdherenceCard(MedicineProvider medProvider) {
+    final rate = medProvider.adherenceRate;
+    final percentStr = '${(rate * 100).toStringAsFixed(0)}%';
+    
+    String textAdvice = 'Excellent compliance! Scheduled intake has been extremely consistent.';
+    if (rate < 0.6) {
+      textAdvice = 'Adherence is low. Try setting up reminders on your medications to stay on track.';
+    } else if (rate < 0.85) {
+      textAdvice = 'Good compliance, but try to take all scheduled doses consistently.';
+    }
+
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -94,27 +133,52 @@ class InsightsHistoryPage extends StatelessWidget {
               const SizedBox(width: 10),
               Text('Medication Adherence', style: MaatriTypography.titleMedium),
               const Spacer(),
-              Text('92%', style: MaatriTypography.headlineSmall.copyWith(color: MaatriColors.teal)),
+              Text(percentStr, style: MaatriTypography.headlineSmall.copyWith(color: MaatriColors.teal)),
             ],
           ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: const LinearProgressIndicator(
-              value: 0.92,
+            child: LinearProgressIndicator(
+              value: rate.clamp(0.0, 1.0),
               minHeight: 10,
               backgroundColor: MaatriColors.lightGray,
-              valueColor: AlwaysStoppedAnimation<Color>(MaatriColors.teal),
+              valueColor: const AlwaysStoppedAnimation<Color>(MaatriColors.teal),
             ),
           ),
           const SizedBox(height: 8),
-          Text('Excellent compliance! Scheduled intake has been extremely consistent over the last 14 days.', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
+          Text(textAdvice, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
         ],
       ),
     );
   }
 
-  Widget _buildSymptomFrequencyCard() {
+  Widget _buildSymptomFrequencyCard(UserProvider userProvider) {
+    final history = userProvider.symptomsHistory;
+    final last7Days = List.generate(7, (i) {
+      final d = DateTime.now().subtract(Duration(days: i));
+      return "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+    });
+
+    final Map<String, int> symptomCounts = {
+      'Morning Sickness': 0,
+      'Backache': 0,
+      'Fatigue': 0,
+      'Headache': 0,
+      'Swollen Ankles': 0,
+    };
+
+    for (final dateStr in last7Days) {
+      final list = history[dateStr];
+      if (list != null) {
+        for (final symptom in list) {
+          if (symptomCounts.containsKey(symptom)) {
+            symptomCounts[symptom] = symptomCounts[symptom]! + 1;
+          }
+        }
+      }
+    }
+
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -132,10 +196,10 @@ class InsightsHistoryPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _buildSymptomBar('Morning Sickness', 4, MaatriColors.coral),
-          _buildSymptomBar('Backache', 6, MaatriColors.goldenAmber),
-          _buildSymptomBar('Fatigue', 2, MaatriColors.teal),
-          _buildSymptomBar('Headache', 1, MaatriColors.lavenderDark),
+          _buildSymptomBar('Morning Sickness', symptomCounts['Morning Sickness']!, MaatriColors.coral),
+          _buildSymptomBar('Backache', symptomCounts['Backache']!, MaatriColors.goldenAmber),
+          _buildSymptomBar('Fatigue', symptomCounts['Fatigue']!, MaatriColors.teal),
+          _buildSymptomBar('Headache', symptomCounts['Headache']!, MaatriColors.lavenderDark),
         ],
       ),
     );
@@ -169,7 +233,21 @@ class InsightsHistoryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildMoodAnalyticsCard() {
+  Widget _buildMoodAnalyticsCard(MoodProvider moodProvider) {
+    final moods = moodProvider.moods;
+    final totalCount = moods.length;
+    final Map<String, int> counts = {};
+    for (final m in moods) {
+      final moodStr = m['mood'] as String? ?? '😊 Happy';
+      counts[moodStr] = (counts[moodStr] ?? 0) + 1;
+    }
+    if (counts.isEmpty) {
+      counts['😊 Happy'] = 1;
+    }
+    final divisor = totalCount == 0 ? 1 : totalCount;
+
+    final sorted = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -189,17 +267,16 @@ class InsightsHistoryPage extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildMoodShare('😊 Happy', '50%'),
-              _buildMoodShare('😌 Calm', '30%'),
-              _buildMoodShare('😴 Tired', '20%'),
-            ],
+            children: sorted.take(3).map((e) {
+              final pct = ((e.value / divisor) * 100).toStringAsFixed(0);
+              return _buildMoodShare(e.key, '$pct%');
+            }).toList(),
           ),
           const SizedBox(height: 12),
-          const Center(
+          Center(
             child: Text(
-              'Mood profile indicates strong overall emotional stability.',
-              style: TextStyle(color: MaatriColors.slate, fontSize: 11, fontStyle: FontStyle.italic),
+              totalCount == 0 ? 'Start logging your daily mood to see analytics.' : 'Mood profile indicates healthy emotional patterns.',
+              style: const TextStyle(color: MaatriColors.slate, fontSize: 11, fontStyle: FontStyle.italic),
             ),
           ),
         ],

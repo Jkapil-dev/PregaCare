@@ -50,9 +50,9 @@ class DashboardPage extends StatelessWidget {
               const SizedBox(height: MaatriTheme.spacingLg),
               _buildQuickActions(context, trimester),
               const SizedBox(height: MaatriTheme.spacingLg),
-              _buildDailyInsight(context),
+              _buildDailyInsight(context, userProvider),
               const SizedBox(height: MaatriTheme.spacingMd),
-              _buildAIRecommendation(context),
+              _buildAIRecommendation(context, userProvider),
               const SizedBox(height: MaatriTheme.spacingMd),
               _buildWeeklySummary(context, medProvider, userProvider, moodProvider, journalProvider),
               const SizedBox(height: MaatriTheme.spacingXl),
@@ -170,7 +170,9 @@ class DashboardPage extends StatelessWidget {
     ]);
   }
 
-  Widget _buildDailyInsight(BuildContext context) {
+  Widget _buildDailyInsight(BuildContext context, UserProvider userProvider) {
+    final stats = userProvider.weeklyDevelopmentStats;
+    final desc = stats['description'] ?? 'Your baby is growing and developing beautifully today!';
     return GlassCard(
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
@@ -182,13 +184,23 @@ class DashboardPage extends StatelessWidget {
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text("Today's Insight", style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.charcoal)),
           const SizedBox(height: 4),
-          Text('Your baby can now hear sounds from outside the womb. Try playing gentle music or reading aloud! 🎵', style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
+          Text(desc, style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
         ])),
       ]),
     );
   }
 
-  Widget _buildAIRecommendation(BuildContext context) {
+  Widget _buildAIRecommendation(BuildContext context, UserProvider userProvider) {
+    final week = userProvider.pregnancyWeek;
+    String recommendation = 'Ensure you are drinking at least 8-10 glasses of water daily.';
+    if (week <= 12) {
+      recommendation = 'Ensure you take your prenatal vitamins containing folic acid, and focus on rest.';
+    } else if (week <= 27) {
+      recommendation = 'Monitor your blood pressure daily and stay hydrated with at least 8-10 glasses of water.';
+    } else {
+      recommendation = 'Count your baby\'s kicks daily on the Baby Monitoring page and watch for signs of contractions.';
+    }
+
     return GlassCard(
       onTap: () => context.go(AppRoutes.aiAssistant),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -201,7 +213,7 @@ class DashboardPage extends StatelessWidget {
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('AI Recommends', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.charcoal)),
           const SizedBox(height: 4),
-          Text('Consider adding iron-rich foods like spinach and lentils to your diet this week.', style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
+          Text(recommendation, style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
         ])),
         const Icon(Icons.chevron_right_rounded, color: MaatriColors.mediumGray),
       ]),
