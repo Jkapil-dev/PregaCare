@@ -102,7 +102,16 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
               const SizedBox(width: 10),
               Text('Blood Pressure', style: MaatriTypography.titleMedium),
               const Spacer(),
-              Text('Normal Range', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.success, fontWeight: FontWeight.w600)),
+              Text(
+                (userProvider.bpSys.isEmpty || userProvider.bpDia.isEmpty)
+                    ? 'Not recorded'
+                    : '${userProvider.bpSys}/${userProvider.bpDia} mmHg',
+                style: MaatriTypography.labelLarge.copyWith(
+                  color: (userProvider.bpSys.isEmpty || userProvider.bpDia.isEmpty)
+                      ? MaatriColors.slate
+                      : MaatriColors.coral,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -230,7 +239,10 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
               const SizedBox(width: 10),
               Text('Sleep Log', style: MaatriTypography.titleMedium),
               const Spacer(),
-              Text('${sleep.toStringAsFixed(1)} hrs', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.lavenderDark)),
+              Text(
+                sleep == 0.0 ? 'Not logged' : '${sleep.toStringAsFixed(1)} hrs',
+                style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.lavenderDark),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -245,8 +257,10 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
           ),
           Center(
             child: Text(
-              sleep >= 8 ? 'Excellent Rest! 😴' : 'Try to get 8 hours of sleep.',
-              style: MaatriTypography.labelSmall.copyWith(color: sleep >= 8 ? MaatriColors.success : MaatriColors.goldenAmber),
+              sleep == 0.0 ? 'Use slider to log your sleep' : (sleep >= 8 ? 'Excellent Rest! 😴' : 'Try to get 8 hours of sleep.'),
+              style: MaatriTypography.labelSmall.copyWith(
+                color: sleep == 0.0 ? MaatriColors.slate : (sleep >= 8 ? MaatriColors.success : MaatriColors.goldenAmber),
+              ),
             ),
           ),
         ],
@@ -309,7 +323,10 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
               const SizedBox(width: 10),
               Text('Body Temperature', style: MaatriTypography.titleMedium),
               const Spacer(),
-              Text('${temp.toStringAsFixed(1)} °C', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.coral)),
+              Text(
+                temp == 0.0 ? 'Not recorded' : '${temp.toStringAsFixed(1)} °C',
+                style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.coral),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -317,16 +334,24 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               ElevatedButton(
-                onPressed: () => userProvider.updateTemperature(temp - 0.1),
+                onPressed: () {
+                  final newTemp = temp == 0.0 ? 36.7 : temp - 0.1;
+                  userProvider.updateTemperature(newTemp);
+                },
                 style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.lightGray, foregroundColor: MaatriColors.charcoal),
                 child: const Icon(Icons.remove, size: 16),
               ),
               Text(
-                temp > 37.5 ? 'Slight Fever ⚠️' : 'Normal Temp ✓',
-                style: MaatriTypography.bodyMedium.copyWith(color: temp > 37.5 ? MaatriColors.danger : MaatriColors.success),
+                temp == 0.0 ? 'Log today\'s temperature' : (temp > 37.5 ? 'Slight Fever ⚠️' : 'Normal Temp ✓'),
+                style: MaatriTypography.bodyMedium.copyWith(
+                  color: temp == 0.0 ? MaatriColors.slate : (temp > 37.5 ? MaatriColors.danger : MaatriColors.success),
+                ),
               ),
               ElevatedButton(
-                onPressed: () => userProvider.updateTemperature(temp + 0.1),
+                onPressed: () {
+                  final newTemp = temp == 0.0 ? 36.9 : temp + 0.1;
+                  userProvider.updateTemperature(newTemp);
+                },
                 style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.lightGray, foregroundColor: MaatriColors.charcoal),
                 child: const Icon(Icons.add, size: 16),
               ),

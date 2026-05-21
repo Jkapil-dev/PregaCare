@@ -238,11 +238,10 @@ class InsightsHistoryPage extends StatelessWidget {
     final totalCount = moods.length;
     final Map<String, int> counts = {};
     for (final m in moods) {
-      final moodStr = m['mood'] as String? ?? '😊 Happy';
-      counts[moodStr] = (counts[moodStr] ?? 0) + 1;
-    }
-    if (counts.isEmpty) {
-      counts['😊 Happy'] = 1;
+      final moodStr = m['mood'] as String?;
+      if (moodStr != null) {
+        counts[moodStr] = (counts[moodStr] ?? 0) + 1;
+      }
     }
     final divisor = totalCount == 0 ? 1 : totalCount;
 
@@ -265,20 +264,32 @@ class InsightsHistoryPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: sorted.take(3).map((e) {
-              final pct = ((e.value / divisor) * 100).toStringAsFixed(0);
-              return _buildMoodShare(e.key, '$pct%');
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              totalCount == 0 ? 'Start logging your daily mood to see analytics.' : 'Mood profile indicates healthy emotional patterns.',
-              style: const TextStyle(color: MaatriColors.slate, fontSize: 11, fontStyle: FontStyle.italic),
+          if (totalCount == 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'No moods logged yet',
+                  style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate),
+                ),
+              ),
+            )
+          else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: sorted.take(3).map((e) {
+                final pct = ((e.value / divisor) * 100).toStringAsFixed(0);
+                return _buildMoodShare(e.key, '$pct%');
+              }).toList(),
             ),
-          ),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                'Mood profile indicates healthy emotional patterns.',
+                style: const TextStyle(color: MaatriColors.slate, fontSize: 11, fontStyle: FontStyle.italic),
+              ),
+            ),
+          ],
         ],
       ),
     );

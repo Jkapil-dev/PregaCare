@@ -11,6 +11,7 @@ import 'package:maatricare/core/providers/medicine_provider.dart';
 import 'package:maatricare/core/providers/mood_provider.dart';
 import 'package:maatricare/core/providers/journal_provider.dart';
 import 'package:maatricare/core/providers/record_provider.dart';
+import 'package:maatricare/core/providers/appointment_provider.dart';
 
 // Sections Sub-pages
 import 'package:maatricare/features/tracker/health_tracking/presentation/pages/health_tracking_page.dart';
@@ -37,6 +38,12 @@ class TrackerHomePage extends StatelessWidget {
     final moodProvider = context.watch<MoodProvider>();
     final journalProvider = context.watch<JournalProvider>();
     final recordProvider = context.watch<RecordProvider>();
+    final apptProvider = context.watch<AppointmentProvider>();
+
+    final now = DateTime.now();
+    final upcomingCount = apptProvider.appointments
+        .where((c) => c.consultationStatus == 'Upcoming' && c.appointmentDate.isAfter(now.subtract(const Duration(days: 1))))
+        .length;
 
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
@@ -81,7 +88,14 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Medication & Care',
                 subtitle: 'Schedules & Doctor Appointments',
-                summaryText: '${medicineProvider.medicines.length} active medicines · Doctor visits scheduled',
+                summaryText: () {
+                  final medCount = medicineProvider.medicines.length;
+                  final medSummary = medCount > 0 ? '$medCount active medicine${medCount > 1 ? 's' : ''}' : 'No active medicines';
+                  final apptText = upcomingCount > 0
+                      ? '$upcomingCount upcoming visit${upcomingCount > 1 ? 's' : ''}'
+                      : 'No visits scheduled';
+                  return '$medSummary · $apptText';
+                }(),
                 icon: Icons.medication_rounded,
                 color: MaatriColors.goldenAmber,
                 onTap: () => _navigateTo(context, const MedicationCarePage()),
@@ -93,7 +107,13 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Emotional Wellness',
                 subtitle: 'Moods, Journal & Reflections',
-                summaryText: 'Mood today: ${moodProvider.latestMood} · ${journalProvider.journals.length} journal entries',
+                summaryText: () {
+                  final latestMood = moodProvider.latestMood;
+                  final moodText = latestMood == '—' ? 'No mood logged today' : 'Mood today: $latestMood';
+                  final journalCount = journalProvider.journals.length;
+                  final journalSummary = journalCount > 0 ? '$journalCount journal entry${journalCount > 1 ? 'ies' : 'y'}' : 'No journal entries';
+                  return '$moodText · $journalSummary';
+                }(),
                 icon: Icons.self_improvement_rounded,
                 color: MaatriColors.lavenderDark,
                 onTap: () => _navigateTo(context, const EmotionalWellnessPage()),
@@ -105,7 +125,11 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Records & Documents',
                 subtitle: 'Ultrasounds, Reports & Prescriptions',
-                summaryText: '${recordProvider.records.length} files secured · Click to view documents',
+                summaryText: () {
+                  final recordCount = recordProvider.records.length;
+                  final recordSummary = recordCount > 0 ? '$recordCount file${recordCount > 1 ? 's' : ''} secured' : 'No documents secured';
+                  return '$recordSummary · Click to view documents';
+                }(),
                 icon: Icons.folder_open_rounded,
                 color: MaatriColors.info,
                 onTap: () => _navigateTo(context, const RecordsDocumentsPage()),

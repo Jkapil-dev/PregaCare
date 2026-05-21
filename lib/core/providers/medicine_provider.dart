@@ -57,7 +57,7 @@ class MedicineProvider extends ChangeNotifier {
     return user?.uid ?? 'default_user_id';
   }
 
-  /// Load medicines from Firestore (with Mock fallbacks for empty databases)
+  /// Load medicines from Firestore
   Future<void> loadMedicines() async {
     _isLoading = true;
     _errorMessage = null;
@@ -65,17 +65,7 @@ class MedicineProvider extends ChangeNotifier {
 
     try {
       final list = await _firestoreService.getMedicines(_userId);
-      
-      if (list.isEmpty) {
-        debugPrint('MedicineProvider: No remote medicines found. Pre-populating mocks.');
-        final mockList = _getMockMedicines();
-        for (final mockMed in mockList) {
-          await _firestoreService.saveMedicine(_userId, mockMed);
-        }
-        _medicines = mockList;
-      } else {
-        _medicines = list;
-      }
+      _medicines = list;
       _errorMessage = null;
     } catch (e) {
       _errorMessage = e.toString();
@@ -212,60 +202,6 @@ class MedicineProvider extends ChangeNotifier {
       debugPrint('MedicineProvider updateAdherence remote save error: $e');
       // Rollback on failure if necessary, but typically keep local optimistic state
     }
-  }
-
-  /// Default mock medicines to ensure visual completeness out-of-the-box
-  List<Medicine> _getMockMedicines() {
-    final today = DateTime.now();
-    final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
-    
-    return [
-      Medicine(
-        id: 'folic_acid_mock',
-        medicineName: 'Folic Acid',
-        dosage: '400mcg',
-        selectedTimes: ['Morning'],
-        startDate: today,
-        endDate: today.add(const Duration(days: 30)),
-        durationDays: 30,
-        notes: 'Take before meal',
-        mealType: 'Before Meal',
-        reminderEnabled: true,
-        adherenceLogs: {
-          todayStr: {'Morning': 'Taken'}
-        },
-      ),
-      Medicine(
-        id: 'iron_supplement_mock',
-        medicineName: 'Iron Supplement',
-        dosage: '100mg',
-        selectedTimes: ['Morning', 'Night'],
-        startDate: today,
-        endDate: today.add(const Duration(days: 14)),
-        durationDays: 14,
-        notes: 'With orange juice for absorption',
-        mealType: 'After Meal',
-        reminderEnabled: true,
-        adherenceLogs: {
-          todayStr: {'Morning': 'Taken', 'Night': 'Pending'}
-        },
-      ),
-      Medicine(
-        id: 'calcium_mock',
-        medicineName: 'Calcium',
-        dosage: '500mg',
-        selectedTimes: ['Afternoon', 'Night'],
-        startDate: today,
-        endDate: today.add(const Duration(days: 20)),
-        durationDays: 20,
-        notes: 'Do not take together with Iron',
-        mealType: 'With Meal',
-        reminderEnabled: false,
-        adherenceLogs: {
-          todayStr: {'Afternoon': 'Pending', 'Night': 'Pending'}
-        },
-      ),
-    ];
   }
 
   @override

@@ -20,7 +20,7 @@ class MoodProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   String get latestMood {
-    if (_moods.isEmpty) return '😊 Happy'; // Safe default if empty
+    if (_moods.isEmpty) return '—';
     // Sort to make sure we get the newest date
     final sorted = List<Map<String, dynamic>>.from(_moods);
     sorted.sort((a, b) {
@@ -28,7 +28,7 @@ class MoodProvider extends ChangeNotifier {
       final bDate = b['date'] as String? ?? '';
       return bDate.compareTo(aDate); // descending
     });
-    return sorted.first['mood'] as String? ?? '😊 Happy';
+    return sorted.first['mood'] as String? ?? '—';
   }
 
   void _init() {

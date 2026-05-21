@@ -101,7 +101,7 @@ class MedicalRecordStorageService {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyRecords);
       if (jsonString == null) {
-        return _getMockRecords();
+        return [];
       }
       final List<dynamic> jsonList = jsonDecode(jsonString);
       final list = jsonList.map((json) => MedicalRecord.fromJson(json)).toList();
@@ -109,7 +109,7 @@ class MedicalRecordStorageService {
       return list;
     } catch (e) {
       debugPrint('Failed to load medical records from prefs: $e');
-      return _getMockRecords();
+      return [];
     }
   }
 
@@ -154,57 +154,5 @@ class MedicalRecordStorageService {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode(list.map((r) => r.toJson()).toList());
     await prefs.setString(_keyRecords, jsonString);
-  }
-
-  /// Default mock records so the UI looks populated out-of-the-box
-  List<MedicalRecord> _getMockRecords() {
-    final today = DateTime.now();
-    return [
-      MedicalRecord(
-        id: 'rec_1',
-        fileName: 'Anomaly_Ultrasound_Scan.jpg',
-        fileType: 'image',
-        category: 'Ultrasounds',
-        uploadDate: today.subtract(const Duration(days: 2)),
-        filePath: '', // Mock: no actual file
-        notes: 'Second trimester anomaly scan — all clear',
-      ),
-      MedicalRecord(
-        id: 'rec_2',
-        fileName: 'First_Trimester_Scan.jpg',
-        fileType: 'image',
-        category: 'Ultrasounds',
-        uploadDate: today.subtract(const Duration(days: 90)),
-        filePath: '',
-        notes: 'Week 12 viability scan',
-      ),
-      MedicalRecord(
-        id: 'rec_3',
-        fileName: 'CBC_Report.pdf',
-        fileType: 'pdf',
-        category: 'Lab Reports',
-        uploadDate: today.subtract(const Duration(days: 30)),
-        filePath: '',
-        notes: 'Complete Blood Count — results within normal range',
-      ),
-      MedicalRecord(
-        id: 'rec_4',
-        fileName: 'GTT_Report.pdf',
-        fileType: 'pdf',
-        category: 'Lab Reports',
-        uploadDate: today.subtract(const Duration(days: 35)),
-        filePath: '',
-        notes: 'Glucose Tolerance Test — no gestational diabetes detected',
-      ),
-      MedicalRecord(
-        id: 'rec_5',
-        fileName: 'Dr_Sharma_Prescription.jpg',
-        fileType: 'image',
-        category: 'Prescriptions',
-        uploadDate: today.subtract(const Duration(days: 15)),
-        filePath: '',
-        notes: 'OBGYN visit prescription for iron and calcium',
-      ),
-    ];
   }
 }

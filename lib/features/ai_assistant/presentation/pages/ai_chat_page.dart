@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
-import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/providers/user_provider.dart';
 
 class AiChatPage extends StatefulWidget {
   const AiChatPage({super.key});
@@ -24,22 +25,24 @@ class _AiChatPageState extends State<AiChatPage> {
   void _send(String t) {
     if (t.trim().isEmpty) return;
     setState(() { _msgs.add(_Msg(t, true)); _msgCtrl.clear(); });
+    final week = Provider.of<UserProvider>(context, listen: false).pregnancyWeek;
     Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) { setState(() { _msgs.add(_Msg(_reply(t), false)); }); _scroll(); }
+      if (mounted) { setState(() { _msgs.add(_Msg(_reply(t, week), false)); }); _scroll(); }
     });
     _scroll();
   }
 
-  String _reply(String q) {
-    if (q.toLowerCase().contains('iron')) return "Iron-rich foods for Week 24:\n\n🥬 Spinach & greens\n🫘 Lentils & chickpeas\n🥩 Lean red meat\n🥜 Pumpkin seeds\n\n💡 Pair with vitamin C!\n\n⚠️ Consult your doctor for personalized advice.";
+  String _reply(String q, int week) {
+    if (q.toLowerCase().contains('iron')) return "Iron-rich foods for Week $week:\n\n🥬 Spinach & greens\n🫘 Lentils & chickpeas\n🥩 Lean red meat\n🥜 Pumpkin seeds\n\n💡 Pair with vitamin C!\n\n⚠️ Consult your doctor for personalized advice.";
     if (q.toLowerCase().contains('danger')) return "🚨 Danger signs:\n\n• Severe headache/vision changes\n• Sudden swelling\n• Vaginal bleeding\n• Severe abdominal pain\n• Reduced fetal movement\n\nContact your doctor IMMEDIATELY if you experience these.";
-    return "During Week 24, your baby is growing rapidly! I'd recommend discussing this with your healthcare provider.\n\n⚠️ I provide general guidance, not medical diagnoses.";
+    return "During Week $week, your baby is growing rapidly! I'd recommend discussing this with your healthcare provider.\n\n⚠️ I provide general guidance, not medical diagnoses.";
   }
 
   void _scroll() { Future.delayed(const Duration(milliseconds: 100), () { if (_scrollCtrl.hasClients) _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }); }
 
   @override
   Widget build(BuildContext context) {
+    final week = Provider.of<UserProvider>(context).pregnancyWeek;
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       body: SafeArea(
@@ -53,7 +56,7 @@ class _AiChatPageState extends State<AiChatPage> {
               const SizedBox(width: 8),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('AI Assistant', style: MaatriTypography.headlineSmall.copyWith(color: MaatriColors.lavenderDark)),
-                Text('Week 24 · Always here to help', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.lavenderDark)),
+                Text('Week $week · Always here to help', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.lavenderDark)),
               ]),
             ]),
           ),

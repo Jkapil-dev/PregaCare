@@ -88,14 +88,14 @@ class MedicineStorageService {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyMedicines);
       if (jsonString == null) {
-        return _getMockMedicines();
+        return [];
       }
 
       final List<dynamic> jsonList = jsonDecode(jsonString);
       return jsonList.map((json) => Medicine.fromJson(json)).toList();
     } catch (e) {
       debugPrint('Failed to load medicines: $e');
-      return _getMockMedicines();
+      return [];
     }
   }
 
@@ -115,59 +115,5 @@ class MedicineStorageService {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode(medicines.map((m) => m.toJson()).toList());
     await prefs.setString(_keyMedicines, jsonString);
-  }
-
-  /// Default mock medicines to ensure visual completeness out-of-the-box
-  List<Medicine> _getMockMedicines() {
-    final today = DateTime.now();
-    final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
-    
-    return [
-      Medicine(
-        id: 'mock_1',
-        medicineName: 'Folic Acid',
-        dosage: '400mcg',
-        selectedTimes: ['Morning'],
-        startDate: today,
-        endDate: today.add(const Duration(days: 30)),
-        durationDays: 30,
-        notes: 'Take before meal',
-        mealType: 'Before Meal',
-        reminderEnabled: true,
-        adherenceLogs: {
-          todayStr: {'Morning': 'Taken'}
-        },
-      ),
-      Medicine(
-        id: 'mock_2',
-        medicineName: 'Iron Supplement',
-        dosage: '100mg',
-        selectedTimes: ['Morning', 'Night'],
-        startDate: today,
-        endDate: today.add(const Duration(days: 14)),
-        durationDays: 14,
-        notes: 'With orange juice for absorption',
-        mealType: 'After Meal',
-        reminderEnabled: true,
-        adherenceLogs: {
-          todayStr: {'Morning': 'Taken', 'Night': 'Pending'}
-        },
-      ),
-      Medicine(
-        id: 'mock_3',
-        medicineName: 'Calcium',
-        dosage: '500mg',
-        selectedTimes: ['Afternoon', 'Night'],
-        startDate: today,
-        endDate: today.add(const Duration(days: 20)),
-        durationDays: 20,
-        notes: 'Do not take together with Iron',
-        mealType: 'With Meal',
-        reminderEnabled: false,
-        adherenceLogs: {
-          todayStr: {'Afternoon': 'Pending', 'Night': 'Pending'}
-        },
-      ),
-    ];
   }
 }

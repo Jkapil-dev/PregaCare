@@ -94,7 +94,7 @@ class JournalStorageService {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyJournal);
       if (jsonString == null) {
-        return _getMockJournals();
+        return [];
       }
 
       final List<dynamic> jsonList = jsonDecode(jsonString);
@@ -105,7 +105,7 @@ class JournalStorageService {
       return list;
     } catch (e) {
       debugPrint('Failed to load journals from prefs: $e');
-      return _getMockJournals();
+      return [];
     }
   }
 
@@ -177,43 +177,5 @@ class JournalStorageService {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode(list.map((item) => item.toJson()).toList());
     await prefs.setString(_keyJournal, jsonString);
-  }
-
-  /// Default mock journal reflections
-  List<JournalEntry> _getMockJournals() {
-    final today = DateTime.now();
-    
-    final dateToday = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
-    final yesterday = today.subtract(const Duration(days: 1));
-    final dateYesterday = "${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}";
-    final twoDaysAgo = today.subtract(const Duration(days: 2));
-    final dateTwoDaysAgo = "${twoDaysAgo.year}-${twoDaysAgo.month.toString().padLeft(2, '0')}-${twoDaysAgo.day.toString().padLeft(2, '0')}";
-
-    return [
-      JournalEntry(
-        id: 'journal_1',
-        date: dateToday,
-        title: 'Baby Kicked Today',
-        content: 'Felt the first strong kick today! Such a magical feeling. Sharing this moment with Rahul was beautiful.',
-        mood: '😊 Happy',
-        isBookmarked: true,
-      ),
-      JournalEntry(
-        id: 'journal_2',
-        date: dateYesterday,
-        title: 'Breathing Center',
-        content: 'Bit of anxiety about the anomaly scan next week, but practicing daily breathing exercises is keeping me centered.',
-        mood: '😌 Calm',
-        isBookmarked: false,
-      ),
-      JournalEntry(
-        id: 'journal_3',
-        date: dateTwoDaysAgo,
-        title: 'Feeling Sleepy',
-        content: 'Felt exhausted today after a short walk. Took a nice 2-hour afternoon nap.',
-        mood: '😴 Tired',
-        isBookmarked: false,
-      ),
-    ];
   }
 }

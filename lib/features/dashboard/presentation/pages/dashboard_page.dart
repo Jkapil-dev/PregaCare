@@ -240,10 +240,12 @@ class DashboardPage extends StatelessWidget {
         }
       }
     }
-    final medsText = totalMedsToday > 0 ? '$takenMedsToday/$totalMedsToday' : '0/${medProvider.medicines.length}';
+    final medsText = (totalMedsToday == 0 && medProvider.medicines.isEmpty)
+        ? '—'
+        : (totalMedsToday > 0 ? '$takenMedsToday/$totalMedsToday' : '0/$totalMedsToday');
 
     final weightText = userProvider.weight > 0 ? '${userProvider.weight.toStringAsFixed(1)} kg' : '0.0 kg';
-    final moodEmoji = moodProvider.latestMood.split(' ').first;
+    final moodEmoji = moodProvider.latestMood == '—' ? '—' : moodProvider.latestMood.split(' ').first;
     final notesText = '${journalProvider.journals.length}';
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

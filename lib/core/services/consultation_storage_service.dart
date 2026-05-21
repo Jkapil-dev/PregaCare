@@ -86,14 +86,14 @@ class ConsultationStorageService {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyConsultations);
       if (jsonString == null) {
-        return _getMockConsultations();
+        return [];
       }
 
       final List<dynamic> jsonList = jsonDecode(jsonString);
       return jsonList.map((json) => Consultation.fromJson(json)).toList();
     } catch (e) {
       debugPrint('Failed to load consultations from prefs: $e');
-      return _getMockConsultations();
+      return [];
     }
   }
 
@@ -128,45 +128,5 @@ class ConsultationStorageService {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode(list.map((c) => c.toJson()).toList());
     await prefs.setString(_keyConsultations, jsonString);
-  }
-
-  /// Default doctor followups preloaded
-  List<Consultation> _getMockConsultations() {
-    final today = DateTime.now();
-    return [
-      Consultation(
-        id: 'con_1',
-        doctorName: 'Dr. Anya Sharma',
-        specialization: 'Gynaecologist & Obstetrician',
-        hospitalOrClinic: 'Apollo Maternal Wing',
-        appointmentDate: today.add(const Duration(days: 7)),
-        appointmentTime: '10:30 AM',
-        notes: 'Monthly Routine Prenatal Follow-up',
-        reminderEnabled: true,
-        consultationStatus: 'Upcoming',
-      ),
-      Consultation(
-        id: 'con_2',
-        doctorName: 'Dr. Rahul Mehta',
-        specialization: 'Fetal Radiologist',
-        hospitalOrClinic: 'Fortis Imaging Lab',
-        appointmentDate: today.add(const Duration(days: 14)),
-        appointmentTime: '02:00 PM',
-        notes: 'Second Trimester Growth & Anomaly Scan',
-        reminderEnabled: true,
-        consultationStatus: 'Upcoming',
-      ),
-      Consultation(
-        id: 'con_3',
-        doctorName: 'Dr. Sonia Gupta',
-        specialization: 'Maternal Nutritionist',
-        hospitalOrClinic: 'City Health Center',
-        appointmentDate: today.subtract(const Duration(days: 5)),
-        appointmentTime: '11:00 AM',
-        notes: 'Discussion on iron-rich meal options',
-        reminderEnabled: false,
-        consultationStatus: 'Completed',
-      ),
-    ];
   }
 }

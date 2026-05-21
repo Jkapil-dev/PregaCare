@@ -326,29 +326,29 @@ class UserProvider extends ChangeNotifier {
   }
 
   // --- Health Vitals & History Getters ---
-  String get bpSys => _profile?['bpSys']?.toString() ?? '120';
-  String get bpDia => _profile?['bpDia']?.toString() ?? '80';
+  String get bpSys => _profile?['bpSys']?.toString() ?? '';
+  String get bpDia => _profile?['bpDia']?.toString() ?? '';
 
   List<String> get bpHistory {
     final list = _profile?['bpHistory'];
     if (list is List) {
       return List<String>.from(list);
     }
-    return ['120/80 mmHg (Today)', '118/79 mmHg (2 days ago)'];
+    return [];
   }
 
-  int get waterGlasses => _profile?['waterGlasses'] ?? 5;
+  int get waterGlasses => _profile?['waterGlasses'] ?? 0;
 
   double get sleepHours {
     final sleep = _profile?['sleepHours'];
     if (sleep is num) return sleep.toDouble();
-    return 7.5;
+    return 0.0;
   }
 
   double get temperature {
     final temp = _profile?['temperature'];
     if (temp is num) return temp.toDouble();
-    return 36.8;
+    return 0.0;
   }
 
   Map<String, bool> get symptoms {
@@ -367,30 +367,17 @@ class UserProvider extends ChangeNotifier {
     if (raw is Map) {
       return Map<String, List<String>>.from(raw.map((k, v) => MapEntry(k.toString(), List<String>.from(v ?? []))));
     }
-    final today = DateTime.now();
-    String dayStr(int offset) {
-      final d = today.subtract(Duration(days: offset));
-      return "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
-    }
-    return {
-      dayStr(0): ['Morning Sickness', 'Backache'],
-      dayStr(1): ['Backache'],
-      dayStr(2): ['Morning Sickness', 'Backache', 'Fatigue'],
-      dayStr(3): ['Backache'],
-      dayStr(4): ['Fatigue'],
-      dayStr(5): ['Morning Sickness', 'Headache'],
-      dayStr(6): ['Morning Sickness', 'Backache'],
-    };
+    return {};
   }
 
-  int get streak => _profile?['streak'] ?? 12;
+  int get streak => _profile?['streak'] ?? 0;
 
   List<String> get kickLogs {
     final list = _profile?['kickLogs'];
     if (list is List) {
       return List<String>.from(list);
     }
-    return ['10 kicks in 45 mins (Yesterday)', '8 kicks in 30 mins (2 days ago)'];
+    return [];
   }
 
   List<Map<String, dynamic>> get contractionLogs {

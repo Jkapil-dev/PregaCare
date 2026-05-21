@@ -86,14 +86,14 @@ class VaccinationStorageService {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyVaccinations);
       if (jsonString == null) {
-        return _getMockVaccinations();
+        return [];
       }
 
       final List<dynamic> jsonList = jsonDecode(jsonString);
       return jsonList.map((json) => Vaccination.fromJson(json)).toList();
     } catch (e) {
       debugPrint('Failed to load vaccinations from prefs: $e');
-      return _getMockVaccinations();
+      return [];
     }
   }
 
@@ -128,56 +128,5 @@ class VaccinationStorageService {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode(list.map((v) => v.toJson()).toList());
     await prefs.setString(_keyVaccinations, jsonString);
-  }
-
-  /// Prenatal immunisation schedule (TT-1, TT-2, Tdap, Influenza)
-  List<Vaccination> _getMockVaccinations() {
-    final today = DateTime.now();
-    return [
-      Vaccination(
-        id: 'vac_1',
-        vaccineName: 'Tetanus Toxoid (TT-1)',
-        doseNumber: 'Dose 1',
-        scheduledDate: today.subtract(const Duration(days: 45)),
-        hospitalOrClinic: 'Apollo Maternal Wing',
-        doctorName: 'Dr. Anya Sharma',
-        notes: 'First prenatal immunization Dose',
-        reminderEnabled: true,
-        vaccinationStatus: 'Completed',
-      ),
-      Vaccination(
-        id: 'vac_2',
-        vaccineName: 'Tetanus Toxoid (TT-2)',
-        doseNumber: 'Dose 2',
-        scheduledDate: today.subtract(const Duration(days: 10)),
-        hospitalOrClinic: 'Apollo Maternal Wing',
-        doctorName: 'Dr. Anya Sharma',
-        notes: 'Booster Dose booster scheduled 4 weeks post-Dose 1',
-        reminderEnabled: true,
-        vaccinationStatus: 'Completed',
-      ),
-      Vaccination(
-        id: 'vac_3',
-        vaccineName: 'Tdap Booster',
-        doseNumber: 'Dose 1',
-        scheduledDate: today.add(const Duration(days: 15)),
-        hospitalOrClinic: 'Fortis Clinic',
-        doctorName: 'Dr. Rahul Mehta',
-        notes: 'Protects baby from whooping cough post-birth',
-        reminderEnabled: true,
-        vaccinationStatus: 'Upcoming',
-      ),
-      Vaccination(
-        id: 'vac_4',
-        vaccineName: 'Influenza Vaccine',
-        doseNumber: 'Single Dose',
-        scheduledDate: today.add(const Duration(days: 30)),
-        hospitalOrClinic: 'City Health Center',
-        doctorName: 'Dr. Sonia Gupta',
-        notes: 'Highly recommended during season shifts',
-        reminderEnabled: false,
-        vaccinationStatus: 'Upcoming',
-      ),
-    ];
   }
 }
