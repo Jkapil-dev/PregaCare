@@ -1,0 +1,48 @@
+name: maatricare
+description: "MaatriCare - Your intelligent maternal healthcare companion"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_bloc: ^9.1.0
+  equatable: ^2.0.7
+  
+  # Navigation
+  go_router: ^15.1.2
+  
+  # Network
+  dio: ^5.8.0+1
+  
+  # Local Storage
+  shared_preferences: ^2.5.3
+  
+  # UI
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  fl_chart: ^0.70.2
+  smooth_page_indicator: ^1.2.0+3
+  
+  # Utilities
+  intl: ^0.20.2
+  uuid: ^4.5.1
+  url_launcher: ^6.3.1
+  image_picker: ^1.1.2
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
