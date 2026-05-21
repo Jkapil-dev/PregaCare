@@ -30,6 +30,65 @@ class UserProvider extends ChangeNotifier {
   String get displayName => _profile?['displayName'] ?? FirebaseAuth.instance.currentUser?.displayName ?? '';
   String get email => _profile?['email'] ?? FirebaseAuth.instance.currentUser?.email ?? '';
 
+  // --- Personal Info Getters ---
+  String get phoneNumber => _profile?['phoneNumber'] ?? '';
+  int get age {
+    final a = _profile?['age'];
+    if (a is int) return a;
+    return 0;
+  }
+  double get height {
+    final h = _profile?['height'];
+    if (h is num) return h.toDouble();
+    return 0.0;
+  }
+
+  // --- Pregnancy Profile Getters ---
+  String get bloodGroup => _profile?['bloodGroup'] ?? '';
+  String get doctorName => _profile?['doctorName'] ?? '';
+  String get hospitalName => _profile?['hospitalName'] ?? '';
+  String get lmpDateString => _profile?['lmpDate'] ?? '';
+  bool get isFirstPregnancy => _profile?['isFirstPregnancy'] ?? true;
+  int get pregnancyNumber => _profile?['pregnancyNumber'] ?? 1;
+
+  // --- Medical Info Getters ---
+  List<String> get allergies {
+    final list = _profile?['allergies'];
+    if (list is List) return List<String>.from(list);
+    return [];
+  }
+  List<String> get conditions {
+    final list = _profile?['conditions'];
+    if (list is List) return List<String>.from(list);
+    return [];
+  }
+  String get emergencyContactName => _profile?['emergencyContactName'] ?? '';
+  String get emergencyContactPhone => _profile?['emergencyContactPhone'] ?? '';
+  String get medications => _profile?['medications'] ?? '';
+  String get healthNotes => _profile?['healthNotes'] ?? '';
+
+  // --- Settings Getters ---
+  Map<String, bool> get notificationSettings {
+    final raw = _profile?['notificationSettings'];
+    if (raw is Map) {
+      return Map<String, bool>.from(raw.map((k, v) => MapEntry(k.toString(), v == true)));
+    }
+    return {
+      'medicineReminders': true,
+      'appointmentReminders': true,
+      'vaccinationReminders': true,
+      'moodReminders': false,
+      'hydrationReminders': false,
+    };
+  }
+  Map<String, dynamic> get preferences {
+    final raw = _profile?['preferences'];
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return {'darkMode': false, 'language': 'English', 'units': 'Metric'};
+  }
+
+
+
   int get pregnancyWeek {
     final lmpStr = _profile?['lmpDate'];
     if (lmpStr != null) {

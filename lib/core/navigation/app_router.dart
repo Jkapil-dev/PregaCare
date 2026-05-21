@@ -14,6 +14,14 @@ import '../../features/community/presentation/pages/community_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/emergency/presentation/pages/emergency_page.dart';
 import '../../features/timeline/presentation/pages/timeline_page.dart';
+import '../../features/profile/presentation/pages/personal_info_page.dart';
+import '../../features/profile/presentation/pages/pregnancy_profile_page.dart';
+import '../../features/profile/presentation/pages/medical_info_page.dart';
+import '../../features/profile/presentation/pages/notification_settings_page.dart';
+import '../../features/profile/presentation/pages/privacy_security_page.dart';
+import '../../features/profile/presentation/pages/app_preferences_page.dart';
+import '../../features/profile/presentation/pages/help_support_page.dart';
+import '../../features/profile/presentation/pages/about_page.dart';
 import '../navigation/app_shell.dart';
 import '../../../providers/auth_provider.dart';
 
@@ -40,6 +48,16 @@ class AppRoutes {
   static const profile = '/profile';
   static const emergency = '/emergency';
   static const timeline = '/timeline';
+
+  // Profile sub-pages routes
+  static const personalInfo = '/profile/personal';
+  static const pregnancyProfile = '/profile/pregnancy';
+  static const medicalInfo = '/profile/medical';
+  static const notificationSettings = '/profile/notifications';
+  static const privacySecurity = '/profile/privacy';
+  static const appPreferences = '/profile/preferences';
+  static const helpSupport = '/profile/help';
+  static const about = '/profile/about';
 
   // Tracker sub-module routes (Level 2)
   static const healthTracking = '/tracker/health';
@@ -205,6 +223,39 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
     GoRoute(
       path: AppRoutes.insightsHistory,
       builder: (context, state) => const InsightsHistoryPage(),
+    ),
+    // Profile sub-pages deep-link routes (Level 2)
+    GoRoute(
+      path: AppRoutes.personalInfo,
+      builder: (context, state) => const PersonalInfoPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.pregnancyProfile,
+      builder: (context, state) => const PregnancyProfilePage(),
+    ),
+    GoRoute(
+      path: AppRoutes.medicalInfo,
+      builder: (context, state) => const MedicalInfoPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.notificationSettings,
+      builder: (context, state) => const NotificationSettingsPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.privacySecurity,
+      builder: (context, state) => const PrivacySecurityPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.appPreferences,
+      builder: (context, state) => const AppPreferencesPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.helpSupport,
+      builder: (context, state) => const HelpSupportPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.about,
+      builder: (context, state) => const AboutPage(),
     ),
   ],
 );
