@@ -2,19 +2,20 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 /// Production-grade medicine data model for MaatriCare.
-/// Supports multi-time selection, duration tracking, and reminder notifications.
+/// Supports multi-time selection, meal relations, reminder status, duration, and adherence history logs.
 class Medicine {
   final String id;
   String medicineName;
   String dosage;
   List<String> selectedTimes; // ["Morning", "Afternoon", "Night"]
+  String mealType; // "Before Meal", "After Meal", "With Meal", "Empty Stomach"
   DateTime startDate;
   DateTime endDate;
   int durationDays;
   String notes;
-  String mealTiming; // "Pre-meal", "Post-meal", "Not Applicable"
   bool reminderEnabled;
   List<int> notificationIds;
+  Map<String, Map<String, String>> adherenceLogs; // {"yyyy-MM-dd": {"Morning": "Taken", "Night": "Pending"}}
   final DateTime createdAt;
 
   Medicine({
@@ -22,48 +23,101 @@ class Medicine {
     required this.medicineName,
     this.dosage = '',
     required this.selectedTimes,
+    this.mealType = 'After Meal',
     required this.startDate,
     required this.endDate,
     required this.durationDays,
     this.notes = '',
-    this.mealTiming = 'Not Applicable',
     this.reminderEnabled = true,
     this.notificationIds = const [],
+    Map<String, Map<String, String>>? adherenceLogs,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  })  : adherenceLogs = adherenceLogs ?? {},
+        createdAt = createdAt ?? DateTime.now();
+
+  /// Calculate Adherence Percentage
+  double get adherencePercentage {
+    int takenCount = 0;
+    int missedCount = 0;
+
+    adherenceLogs.forEach((date, timesMap) {
+      timesMap.forEach((time, status) {
+        if (status == 'Taken') {
+          takenCount++;
+        } else if (status == 'Missed') {
+          missedCount++;
+        }
+      });
+    });
+
+    final totalLogged = takenCount + missedCount;
+    if (totalLogged == 0) return 100.0;
+    return (takenCount / totalLogged) * 100.0;
+  }
+
+  /// Total Scheduled Doses in logs
+  int get totalScheduledDoses {
+    int total = 0;
+    adherenceLogs.forEach((date, timesMap) {
+      total += timesMap.length;
+    });
+    return total;
+  }
+
+  /// Total completed doses in logs
+  int get completedDoses {
+    int takenCount = 0;
+    adherenceLogs.forEach((date, timesMap) {
+      timesMap.forEach((time, status) {
+        if (status == 'Taken') {
+          takenCount++;
+        }
+      });
+    });
+    return takenCount;
+  }
+
+  /// Total missed doses in logs
+  int get missedDoses {
+    int missedCount = 0;
+    adherenceLogs.forEach((date, timesMap) {
+      timesMap.forEach((time, status) {
+        if (status == 'Missed') {
+          missedCount++;
+        }
+      });
+    });
+    return missedCount;
+  }
 
   /// Number of remaining days from today
   int get remainingDays {
-    final diff = endDate.difference(DateTime.now()).inDays;
-    return diff < 0 ? 0 : diff;
+    final today = DateTime.now();
+    final todayZero = DateTime(today.year, today.month, today.day);
+    final endZero = DateTime(endDate.year, endDate.month, endDate.day);
+    final diff = endZero.difference(todayZero).inDays;
+    return diff < 0 ? 0 : diff + 1;
   }
 
   /// Whether the medicine schedule is still active
   bool get isActive {
     final now = DateTime.now();
-    return now.isBefore(endDate.add(const Duration(days: 1))) &&
-        now.isAfter(startDate.subtract(const Duration(days: 1)));
+    final todayZero = DateTime(now.year, now.month, now.day);
+    final startZero = DateTime(startDate.year, startDate.month, startDate.day);
+    final endZero = DateTime(endDate.year, endDate.month, endDate.day);
+    return !todayZero.isBefore(startZero) && !todayZero.isAfter(endZero);
   }
 
   /// Whether the medicine has expired
-  bool get isExpired => DateTime.now().isAfter(endDate.add(const Duration(days: 1)));
+  bool get isExpired {
+    final now = DateTime.now();
+    final todayZero = DateTime(now.year, now.month, now.day);
+    final endZero = DateTime(endDate.year, endDate.month, endDate.day);
+    return todayZero.isAfter(endZero);
+  }
 
   /// Formatted time schedule string (e.g., "Morning • Night")
   String get timeSchedule => selectedTimes.join(' • ');
-
-  /// Get actual hour for a time label
-  static int hourForTime(String time) {
-    switch (time) {
-      case 'Morning':
-        return 8;
-      case 'Afternoon':
-        return 14;
-      case 'Night':
-        return 20;
-      default:
-        return 8;
-    }
-  }
 
   /// Serialize to JSON map
   Map<String, dynamic> toJson() => {
@@ -71,19 +125,19 @@ class Medicine {
         'medicineName': medicineName,
         'dosage': dosage,
         'selectedTimes': selectedTimes,
+        'mealType': mealType,
         'startDate': startDate.toIso8601String(),
         'endDate': endDate.toIso8601String(),
         'durationDays': durationDays,
         'notes': notes,
-        'mealTiming': mealTiming,
         'reminderEnabled': reminderEnabled,
         'notificationIds': notificationIds,
+        'adherenceLogs': adherenceLogs,
         'createdAt': createdAt.toIso8601String(),
       };
 
   /// Deserialize from JSON map (backward compatible)
   factory Medicine.fromJson(Map<String, dynamic> json) {
-    // Backward compat: old model had single 'timing' field
     List<String> times;
     if (json.containsKey('selectedTimes')) {
       times = List<String>.from(json['selectedTimes']);
@@ -99,22 +153,34 @@ class Medicine {
     final durationDays = json['durationDays'] as int? ?? 7;
     final endDate = json.containsKey('endDate')
         ? DateTime.parse(json['endDate'])
-        : startDate.add(Duration(days: durationDays));
+        : startDate.add(Duration(days: durationDays > 0 ? durationDays - 1 : 0));
+
+    // Handle Adherence Logs safely
+    Map<String, Map<String, String>> logs = {};
+    if (json.containsKey('adherenceLogs')) {
+      final rawLogs = json['adherenceLogs'] as Map<String, dynamic>;
+      rawLogs.forEach((date, val) {
+        if (val is Map) {
+          logs[date] = val.map((k, v) => MapEntry(k.toString(), v.toString()));
+        }
+      });
+    }
 
     return Medicine(
       id: json['id'] as String? ?? UniqueKey().toString(),
       medicineName: json['medicineName'] as String? ?? json['name'] as String? ?? '',
       dosage: json['dosage'] as String? ?? '',
       selectedTimes: times,
+      mealType: json['mealType'] as String? ?? json['mealTiming'] as String? ?? 'After Meal',
       startDate: startDate,
       endDate: endDate,
       durationDays: durationDays,
       notes: json['notes'] as String? ?? '',
-      mealTiming: json['mealTiming'] as String? ?? json['meal'] as String? ?? 'Not Applicable',
       reminderEnabled: json['reminderEnabled'] as bool? ?? true,
       notificationIds: json.containsKey('notificationIds')
           ? List<int>.from(json['notificationIds'])
           : [],
+      adherenceLogs: logs,
       createdAt: json.containsKey('createdAt')
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
@@ -126,26 +192,28 @@ class Medicine {
     String? medicineName,
     String? dosage,
     List<String>? selectedTimes,
+    String? mealType,
     DateTime? startDate,
     DateTime? endDate,
     int? durationDays,
     String? notes,
-    String? mealTiming,
     bool? reminderEnabled,
     List<int>? notificationIds,
+    Map<String, Map<String, String>>? adherenceLogs,
   }) {
     return Medicine(
       id: id,
       medicineName: medicineName ?? this.medicineName,
       dosage: dosage ?? this.dosage,
       selectedTimes: selectedTimes ?? this.selectedTimes,
+      mealType: mealType ?? this.mealType,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       durationDays: durationDays ?? this.durationDays,
       notes: notes ?? this.notes,
-      mealTiming: mealTiming ?? this.mealTiming,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       notificationIds: notificationIds ?? this.notificationIds,
+      adherenceLogs: adherenceLogs ?? this.adherenceLogs,
       createdAt: createdAt,
     );
   }

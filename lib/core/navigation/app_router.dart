@@ -11,8 +11,15 @@ import '../../features/community/presentation/pages/community_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/emergency/presentation/pages/emergency_page.dart';
 import '../../features/timeline/presentation/pages/timeline_page.dart';
-import '../../features/appointments/presentation/pages/appointments_page.dart';
 import '../navigation/app_shell.dart';
+
+// Tracker sub-modules (Level 2 deep-link targets)
+import '../../features/tracker/health_tracking/presentation/pages/health_tracking_page.dart';
+import '../../features/tracker/baby_monitoring/presentation/pages/baby_monitoring_page.dart';
+import '../../features/tracker/medication_care/presentation/pages/medication_care_page.dart';
+import '../../features/tracker/emotional_wellness/presentation/pages/emotional_wellness_page.dart';
+import '../../features/tracker/records_documents/presentation/pages/records_documents_page.dart';
+import '../../features/tracker/insights_history/presentation/pages/insights_history_page.dart';
 
 /// Application route paths
 class AppRoutes {
@@ -27,7 +34,14 @@ class AppRoutes {
   static const profile = '/profile';
   static const emergency = '/emergency';
   static const timeline = '/timeline';
-  static const appointments = '/appointments';
+
+  // Tracker sub-module routes (Level 2)
+  static const healthTracking = '/tracker/health';
+  static const babyMonitoring = '/tracker/baby';
+  static const medicationCare = '/tracker/medication';
+  static const emotionalWellness = '/tracker/emotional';
+  static const recordsDocuments = '/tracker/records';
+  static const insightsHistory = '/tracker/insights';
 }
 
 /// GoRouter configuration
@@ -97,9 +111,31 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.timeline,
       builder: (context, state) => const TimelinePage(),
     ),
+
+    // Tracker sub-module deep-link routes (Level 2 — pushed on top of shell)
     GoRoute(
-      path: AppRoutes.appointments,
-      builder: (context, state) => const AppointmentsPage(),
+      path: AppRoutes.healthTracking,
+      builder: (context, state) => const HealthTrackingPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.babyMonitoring,
+      builder: (context, state) => const BabyMonitoringPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.medicationCare,
+      builder: (context, state) => const MedicationCarePage(),
+    ),
+    GoRoute(
+      path: AppRoutes.emotionalWellness,
+      builder: (context, state) => const EmotionalWellnessPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.recordsDocuments,
+      builder: (context, state) => const RecordsDocumentsPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.insightsHistory,
+      builder: (context, state) => const InsightsHistoryPage(),
     ),
   ],
 );

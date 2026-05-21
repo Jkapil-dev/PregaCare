@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../models/vaccination.dart';
+import '../models/consultation.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -131,6 +133,98 @@ class NotificationService {
     }
 
     return scheduledIds;
+  }
+
+  /// Schedules a vaccination reminder exactly 1 day before the scheduled date at 9:00 AM
+  Future<void> scheduleVaccineReminder(Vaccination vac) async {
+    if (kIsWeb) {
+      debugPrint('Web: Mock scheduled vaccination reminder for ${vac.vaccineName}');
+      return;
+    }
+
+    await init();
+    try {
+      final reminderDate = vac.scheduledDate.subtract(const Duration(days: 1));
+      final scheduledDate = DateTime(reminderDate.year, reminderDate.month, reminderDate.day, 9, 0);
+      final now = DateTime.now();
+
+      if (scheduledDate.isAfter(now)) {
+        final tzScheduledDate = tz.TZDateTime.from(scheduledDate, _getLocalLocation());
+        await _localNotifications.zonedSchedule(
+          vac.notificationId,
+          'Vaccination Reminder 🛡️',
+          '${vac.vaccineName} ${vac.doseNumber} scheduled tomorrow.',
+          tzScheduledDate,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'maatricare_vaccine_channel',
+              'Vaccination Reminders',
+              channelDescription: 'Channel for maternal immunization schedule alerts',
+              importance: Importance.max,
+              priority: Priority.high,
+              playSound: true,
+            ),
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+        debugPrint('Scheduled vaccine reminder for ${vac.vaccineName} on $scheduledDate');
+      }
+    } catch (e) {
+      debugPrint('Error scheduling vaccine notification: $e');
+    }
+  }
+
+  /// Schedules a doctor appointment/consultation reminder exactly 1 day before the scheduled date at 9:00 AM
+  Future<void> scheduleConsultationReminder(Consultation con) async {
+    if (kIsWeb) {
+      debugPrint('Web: Mock scheduled consultation reminder for ${con.doctorName}');
+      return;
+    }
+
+    await init();
+    try {
+      final reminderDate = con.appointmentDate.subtract(const Duration(days: 1));
+      final scheduledDate = DateTime(reminderDate.year, reminderDate.month, reminderDate.day, 9, 0);
+      final now = DateTime.now();
+
+      if (scheduledDate.isAfter(now)) {
+        final tzScheduledDate = tz.TZDateTime.from(scheduledDate, _getLocalLocation());
+        await _localNotifications.zonedSchedule(
+          con.notificationId,
+          'Consultation Reminder 🩺',
+          'Appointment with ${con.doctorName} tomorrow at ${con.appointmentTime}',
+          tzScheduledDate,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'maatricare_consultation_channel',
+              'Consultation Reminders',
+              channelDescription: 'Channel for maternal ANC checkup alerts',
+              importance: Importance.max,
+              priority: Priority.high,
+              playSound: true,
+            ),
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+        debugPrint('Scheduled consultation reminder for ${con.doctorName} on $scheduledDate');
+      }
+    } catch (e) {
+      debugPrint('Error scheduling consultation notification: $e');
+    }
   }
 
   /// Cancels specific notifications

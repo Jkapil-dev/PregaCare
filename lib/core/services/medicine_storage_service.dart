@@ -43,6 +43,45 @@ class MedicineStorageService {
     await _saveToPrefs(medicines);
   }
 
+  /// Update adherence logs and potentially dismiss notifications for today if marked taken
+  Future<void> updateAdherence(String medicineId, String dateStr, String timeLabel, String status) async {
+    final medicines = await loadMedicines();
+    final index = medicines.indexWhere((m) => m.id == medicineId);
+    if (index == -1) return;
+
+    final medicine = medicines[index];
+    final updatedLogs = Map<String, Map<String, String>>.from(medicine.adherenceLogs);
+    if (!updatedLogs.containsKey(dateStr)) {
+      updatedLogs[dateStr] = {};
+    }
+    
+    final dayLogs = Map<String, String>.from(updatedLogs[dateStr]!);
+    dayLogs[timeLabel] = status;
+    updatedLogs[dateStr] = dayLogs;
+
+    // If marked taken, cancel today's specific daily notification to dismiss it
+    if (status == 'Taken') {
+      try {
+        final uniqueId = (medicine.id.hashCode + timeLabel.hashCode).abs() % 100000;
+        final now = DateTime.now();
+        final todayZero = DateTime(now.year, now.month, now.day);
+        final startZero = DateTime(medicine.startDate.year, medicine.startDate.month, medicine.startDate.day);
+        final dayOffset = todayZero.difference(startZero).inDays;
+
+        if (dayOffset >= 0 && dayOffset < medicine.durationDays) {
+          final todayNotificationId = uniqueId + dayOffset;
+          await _notificationService.cancelNotifications([todayNotificationId]);
+        }
+      } catch (e) {
+        debugPrint('Failed to cancel today\'s notification: $e');
+      }
+    }
+
+    final updatedMedicine = medicine.copyWith(adherenceLogs: updatedLogs);
+    medicines[index] = updatedMedicine;
+    await _saveToPrefs(medicines);
+  }
+
   /// Load all persisted medicines
   Future<List<Medicine>> loadMedicines() async {
     try {
@@ -81,6 +120,8 @@ class MedicineStorageService {
   /// Default mock medicines to ensure visual completeness out-of-the-box
   List<Medicine> _getMockMedicines() {
     final today = DateTime.now();
+    final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+    
     return [
       Medicine(
         id: 'mock_1',
@@ -91,8 +132,11 @@ class MedicineStorageService {
         endDate: today.add(const Duration(days: 30)),
         durationDays: 30,
         notes: 'Take before meal',
-        mealTiming: 'Pre-meal',
+        mealType: 'Before Meal',
         reminderEnabled: true,
+        adherenceLogs: {
+          todayStr: {'Morning': 'Taken'}
+        },
       ),
       Medicine(
         id: 'mock_2',
@@ -103,8 +147,11 @@ class MedicineStorageService {
         endDate: today.add(const Duration(days: 14)),
         durationDays: 14,
         notes: 'With orange juice for absorption',
-        mealTiming: 'Post-meal',
+        mealType: 'After Meal',
         reminderEnabled: true,
+        adherenceLogs: {
+          todayStr: {'Morning': 'Taken', 'Night': 'Pending'}
+        },
       ),
       Medicine(
         id: 'mock_3',
@@ -115,8 +162,11 @@ class MedicineStorageService {
         endDate: today.add(const Duration(days: 20)),
         durationDays: 20,
         notes: 'Do not take together with Iron',
-        mealTiming: 'Post-meal',
+        mealType: 'With Meal',
         reminderEnabled: false,
+        adherenceLogs: {
+          todayStr: {'Afternoon': 'Pending', 'Night': 'Pending'}
+        },
       ),
     ];
   }
