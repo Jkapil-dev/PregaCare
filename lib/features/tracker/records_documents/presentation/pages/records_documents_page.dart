@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,8 @@ import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
 import 'package:maatricare/core/models/medical_record.dart';
 import 'package:maatricare/core/services/medical_record_storage_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'document_preview_page.dart';
 
 class RecordsDocumentsPage extends StatefulWidget {
   const RecordsDocumentsPage({super.key});
@@ -194,13 +197,26 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
   }
 
   Widget _buildThumbnail(MedicalRecord rec, Color catColor) {
-    if (rec.isImage && rec.filePath.isNotEmpty && !kIsWeb) {
-      final file = File(rec.filePath);
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.file(file, width: 56, height: 56, fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Center(child: Icon(rec.fileIcon, color: catColor, size: 28))),
-      );
+    if (rec.isImage && rec.filePath.isNotEmpty) {
+      if (kIsWeb) {
+        try {
+          final bytes = base64Decode(rec.filePath);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(bytes, width: 56, height: 56, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Center(child: Icon(rec.fileIcon, color: catColor, size: 28))),
+          );
+        } catch (e) {
+          return Center(child: Icon(rec.fileIcon, color: catColor, size: 28));
+        }
+      } else {
+        final file = File(rec.filePath);
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(file, width: 56, height: 56, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Center(child: Icon(rec.fileIcon, color: catColor, size: 28))),
+        );
+      }
     }
     return Center(child: Icon(rec.fileIcon, color: catColor, size: 28));
   }
@@ -243,92 +259,326 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
     );
   }
 
+  // ── PERMISSIONS HELPER ──
+  Future<bool> _requestCameraPermission() async {
+    if (kIsWeb) return true;
+    final status = await Permission.camera.status;
+    if (status.isGranted) return true;
+
+    final result = await Permission.camera.request();
+    if (result.isGranted) {
+      return true;
+    } else if (result.isPermanentlyDenied) {
+      _showPermissionSettingsDialog('Camera');
+    } else {
+      _showError('Camera permission is required to capture photos.');
+    }
+    return false;
+  }
+
+  Future<bool> _requestStoragePermission() async {
+    if (kIsWeb) return true;
+    
+    // For Android 13+ (SDK 33+), READ_MEDIA_IMAGES is used instead of STORAGE.
+    // In permission_handler, checking Permission.photos requests READ_MEDIA_IMAGES.
+    // On older versions, Permission.storage requests READ/WRITE_EXTERNAL_STORAGE.
+    PermissionStatus status;
+    if (Platform.isAndroid) {
+      final photosStatus = await Permission.photos.status;
+      if (photosStatus.isGranted) return true;
+      
+      // Request photos permission first
+      status = await Permission.photos.request();
+      
+      // If photos is restricted/denied/not supported (e.g. pre-Android 13), fallback to storage
+      if (status.isDenied || status.isRestricted) {
+        status = await Permission.storage.request();
+      }
+    } else {
+      status = await Permission.storage.request();
+    }
+
+    if (status.isGranted) {
+      return true;
+    } else if (status.isPermanentlyDenied) {
+      _showPermissionSettingsDialog('Storage/Photos');
+    } else {
+      _showError('Storage permission is required to select files.');
+    }
+    return false;
+  }
+
+  void _showPermissionSettingsDialog(String permissionName) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('$permissionName Permission Required'),
+        content: Text('MaatriCare needs $permissionName permission to select and save medical records. Please enable it in the app settings.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.coral),
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper to validate allowed file extensions
+  bool _isValidFileType(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    return ext == 'pdf' || ext == 'jpg' || ext == 'jpeg' || ext == 'png';
+  }
+
   // ── CAMERA ──
   Future<void> _pickFromCamera() async {
+    final hasPermission = await _requestCameraPermission();
+    if (!hasPermission) return;
+
     try {
       final image = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 85);
-      if (image != null) await _showCategorySaveDialog(image.path, image.name, 'image');
+      if (image == null) return; // Cancelled
+      
+      if (!_isValidFileType(image.name)) {
+        _showError('Unsupported file type. Only PDF, JPG, and PNG are allowed.');
+        return;
+      }
+
+      if (kIsWeb) {
+        final bytes = await image.readAsBytes();
+        await _showCategorySaveDialog(fileName: image.name, fileType: 'image', fileBytes: bytes);
+      } else {
+        await _showCategorySaveDialog(fileName: image.name, fileType: 'image', filePath: image.path);
+      }
     } catch (e) {
-      _showError('Camera not available. Please check permissions.');
+      _showError('Camera not available or cancelled: $e');
     }
   }
 
   // ── GALLERY ──
   Future<void> _pickFromGallery() async {
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) return;
+
     try {
       final image = await _imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-      if (image != null) await _showCategorySaveDialog(image.path, image.name, 'image');
+      if (image == null) return; // Cancelled
+
+      if (!_isValidFileType(image.name)) {
+        _showError('Unsupported file type. Only PDF, JPG, and PNG are allowed.');
+        return;
+      }
+
+      if (kIsWeb) {
+        final bytes = await image.readAsBytes();
+        await _showCategorySaveDialog(fileName: image.name, fileType: 'image', fileBytes: bytes);
+      } else {
+        await _showCategorySaveDialog(fileName: image.name, fileType: 'image', filePath: image.path);
+      }
     } catch (e) {
-      _showError('Gallery not available. Please check permissions.');
+      _showError('Gallery selection failed or cancelled: $e');
     }
   }
 
   // ── PDF/FILE ──
   Future<void> _pickPdfFile() async {
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) return;
+
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'doc', 'docx']);
-      if (result != null && result.files.single.path != null) {
-        final file = result.files.single;
-        await _showCategorySaveDialog(file.path!, file.name, 'pdf');
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      );
+      if (result == null || result.files.isEmpty) return; // Cancelled
+
+      final file = result.files.first;
+      if (!_isValidFileType(file.name)) {
+        _showError('Unsupported file type. Only PDF, JPG, and PNG are allowed.');
+        return;
+      }
+
+      final fileType = file.name.split('.').last.toLowerCase() == 'pdf' ? 'pdf' : 'image';
+
+      if (kIsWeb) {
+        final bytes = file.bytes;
+        if (bytes == null) {
+          _showError('Could not retrieve file bytes. Please try again.');
+          return;
+        }
+        await _showCategorySaveDialog(fileName: file.name, fileType: fileType, fileBytes: bytes);
+      } else {
+        final path = file.path;
+        if (path == null) {
+          _showError('Could not retrieve file path. Please try again.');
+          return;
+        }
+        await _showCategorySaveDialog(fileName: file.name, fileType: fileType, filePath: path);
       }
     } catch (e) {
-      _showError('File picker not available. Please try again.');
+      _showError('File picker error: $e');
     }
   }
 
   // ── CATEGORY + NOTES DIALOG ──
-  Future<void> _showCategorySaveDialog(String filePath, String fileName, String fileType) async {
+  Future<void> _showCategorySaveDialog({
+    required String fileName,
+    required String fileType,
+    String? filePath,
+    Uint8List? fileBytes,
+  }) async {
     String selectedCategory = 'Other';
     final notesCtrl = TextEditingController();
 
     await showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: MaatriColors.pureWhite,
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: MaatriColors.pureWhite,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => Padding(
           padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Save Medical Record', style: MaatriTypography.headlineSmall),
-            const SizedBox(height: 6),
-            Text(fileName, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
-            const SizedBox(height: 16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Save Medical Record', style: MaatriTypography.headlineSmall),
+                const SizedBox(height: 6),
+                Text(fileName, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 16),
 
-            // Preview thumbnail for images
-            if (fileType == 'image' && !kIsWeb) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(File(filePath), height: 150, width: double.infinity, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(height: 100, color: MaatriColors.cloudGray, child: const Center(child: Icon(Icons.broken_image_rounded, size: 40)))),
-              ),
-              const SizedBox(height: 16),
-            ],
+                // Preview thumbnail for images
+                if (fileType == 'image') ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: kIsWeb
+                        ? (fileBytes != null
+                            ? Image.memory(
+                                fileBytes,
+                                height: 150,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  height: 100,
+                                  color: MaatriColors.cloudGray,
+                                  child: const Center(child: Icon(Icons.broken_image_rounded, size: 40, color: MaatriColors.mediumGray)),
+                                ),
+                              )
+                            : const SizedBox())
+                        : (filePath != null
+                            ? Image.file(
+                                File(filePath),
+                                height: 150,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  height: 100,
+                                  color: MaatriColors.cloudGray,
+                                  child: const Center(child: Icon(Icons.broken_image_rounded, size: 40, color: MaatriColors.mediumGray)),
+                                ),
+                              )
+                            : const SizedBox()),
+                  ),
+                  const SizedBox(height: 16),
+                ] else if (fileType == 'pdf') ...[
+                  Container(
+                    height: 100,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: MaatriColors.coralLight.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.picture_as_pdf_rounded, size: 40, color: MaatriColors.coral),
+                        SizedBox(height: 8),
+                        Text('PDF Document', style: TextStyle(fontWeight: FontWeight.bold, color: MaatriColors.coral)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
-            Text('Record Category', style: MaatriTypography.labelLarge),
-            const SizedBox(height: 8),
-            Wrap(spacing: 8, runSpacing: 8, children: MedicalRecord.allCategories.map((cat) =>
-              ChoiceChip(label: Text(cat), selected: selectedCategory == cat, selectedColor: MedicalRecord.getCategoryColor(cat).withValues(alpha: 0.3), onSelected: (_) => setS(() => selectedCategory = cat)),
-            ).toList()),
-            const SizedBox(height: 16),
+                Text('Record Category', style: MaatriTypography.labelLarge),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: MedicalRecord.allCategories.map((cat) =>
+                    ChoiceChip(
+                      label: Text(cat),
+                      selected: selectedCategory == cat,
+                      selectedColor: MedicalRecord.getCategoryColor(cat).withValues(alpha: 0.3),
+                      onSelected: (_) => setS(() => selectedCategory = cat),
+                    ),
+                  ).toList(),
+                ),
+                const SizedBox(height: 16),
 
-            TextField(controller: notesCtrl, decoration: const InputDecoration(hintText: 'Notes (optional)', prefixIcon: Icon(Icons.description_outlined, color: MaatriColors.slate))),
-            const SizedBox(height: 24),
+                TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Notes (optional)',
+                    prefixIcon: Icon(Icons.description_outlined, color: MaatriColors.slate),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
-            SizedBox(width: double.infinity, height: 52, child: ElevatedButton(
-              onPressed: () async {
-                final savedPath = await _storageService.saveFileLocally(filePath, fileName);
-                final record = MedicalRecord(
-                  id: UniqueKey().toString(), fileName: fileName, fileType: fileType,
-                  category: selectedCategory, uploadDate: DateTime.now(), filePath: savedPath,
-                  notes: notesCtrl.text.trim(),
-                );
-                await _storageService.saveRecord(record);
-                Navigator.pop(ctx);
-                _loadRecords();
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Medical record saved! ✓'), backgroundColor: MaatriColors.success));
-              },
-              child: const Text('Save Record'),
-            )),
-          ])),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        String recordFilePath = '';
+                        if (kIsWeb) {
+                          if (fileBytes != null) {
+                            recordFilePath = base64Encode(fileBytes);
+                          }
+                        } else {
+                          if (filePath != null) {
+                            recordFilePath = await _storageService.saveFileLocally(filePath, fileName);
+                          }
+                        }
+
+                        final record = MedicalRecord(
+                          id: UniqueKey().toString(),
+                          fileName: fileName,
+                          fileType: fileType,
+                          category: selectedCategory,
+                          uploadDate: DateTime.now(),
+                          filePath: recordFilePath,
+                          notes: notesCtrl.text.trim(),
+                        );
+                        await _storageService.saveRecord(record);
+                        if (mounted) {
+                          Navigator.pop(ctx);
+                          _loadRecords();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Medical record saved! ✓'), backgroundColor: MaatriColors.success),
+                          );
+                        }
+                      } catch (e) {
+                        _showError('Failed to save record: $e');
+                      }
+                    },
+                    child: const Text('Save Record'),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -336,70 +586,46 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
 
   // ── FILE PREVIEW ──
   void _previewRecord(MedicalRecord rec) {
-    if (rec.filePath.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Preview not available for mock records.'), backgroundColor: MaatriColors.charcoal));
-      return;
-    }
-    if (rec.isImage) {
-      _showImagePreview(rec);
-    } else if (rec.isPdf) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF viewer: ${rec.fileName}'), backgroundColor: MaatriColors.teal));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Opening: ${rec.fileName}'), backgroundColor: MaatriColors.teal));
-    }
-  }
-
-  void _showImagePreview(MedicalRecord rec) {
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(12),
-        child: Stack(children: [
-          Center(child: kIsWeb
-            ? const Icon(Icons.photo_rounded, color: Colors.white54, size: 80)
-            : InteractiveViewer(child: Image.file(File(rec.filePath), fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_rounded, color: Colors.white54, size: 80))))),
-          Positioned(top: 8, right: 8, child: IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
-            onPressed: () => Navigator.pop(ctx),
-          )),
-          Positioned(bottom: 16, left: 16, right: 16, child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text(rec.fileName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Text('${rec.category} · ${rec.displayDate}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ]),
-          )),
-        ]),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DocumentPreviewPage(record: rec),
       ),
     );
   }
 
   // ── DELETE ──
   void _confirmDelete(String id) {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Delete Record?'),
-      content: const Text('This file will be permanently removed from your device.'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(ctx);
-            await _storageService.deleteRecord(id);
-            _loadRecords();
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Record deleted.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating));
-          },
-          style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.danger),
-          child: const Text('Delete'),
-        ),
-      ],
-    ));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Record?'),
+        content: const Text('This file will be permanently removed from your device.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _storageService.deleteRecord(id);
+              _loadRecords();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Record deleted.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: MaatriColors.danger));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: MaatriColors.danger),
+    );
   }
 }

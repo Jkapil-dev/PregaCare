@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "417023388555",
+    "project_id": "pregacare-b07de",
+    "storage_bucket": "pregacare-b07de.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:417023388555:android:533e6319f770f68514dd8e",
+        "android_client_info": {
+          "package_name": "com.maatricare.maatricare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEsMtL43mj388d4qe2E8PZkw2FiRyHLqQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
