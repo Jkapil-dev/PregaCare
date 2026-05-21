@@ -5,7 +5,7 @@ import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/auth/presentation/pages/auth_page.dart';
 import '../../features/onboarding/presentation/pages/pregnancy_setup_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
-import '../../features/tracking/presentation/pages/tracking_page.dart';
+import '../../features/tracker/tracker_home/presentation/pages/tracker_home_page.dart';
 import '../../features/ai_assistant/presentation/pages/ai_chat_page.dart';
 import '../../features/community/presentation/pages/community_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -64,7 +64,7 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppRoutes.tracking,
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: TrackingPage(),
+            child: TrackerHomePage(),
           ),
         ),
         GoRoute(

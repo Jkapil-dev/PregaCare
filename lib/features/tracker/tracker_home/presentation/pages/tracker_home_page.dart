@@ -1,0 +1,165 @@
+import 'package:flutter/material.dart';
+import 'package:maatricare/core/theme/colors.dart';
+import 'package:maatricare/core/theme/typography.dart';
+import 'package:maatricare/core/theme/theme.dart';
+import 'package:maatricare/core/widgets/common_widgets.dart';
+
+// Sections Sub-pages
+import 'package:maatricare/features/tracker/health_tracking/presentation/pages/health_tracking_page.dart';
+import 'package:maatricare/features/tracker/baby_monitoring/presentation/pages/baby_monitoring_page.dart';
+import 'package:maatricare/features/tracker/medication_care/presentation/pages/medication_care_page.dart';
+import 'package:maatricare/features/tracker/emotional_wellness/presentation/pages/emotional_wellness_page.dart';
+import 'package:maatricare/features/tracker/records_documents/presentation/pages/records_documents_page.dart';
+import 'package:maatricare/features/tracker/insights_history/presentation/pages/insights_history_page.dart';
+
+class TrackerHomePage extends StatelessWidget {
+  const TrackerHomePage({super.key});
+
+  void _navigateTo(BuildContext context, Widget targetScreen) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => targetScreen),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: MaatriColors.warmCream,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: MaatriTheme.spacingSm),
+              Text('Tracker Hub', style: MaatriTypography.displaySmall.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text('A centralized, medical-grade maternal health hub', style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
+              const SizedBox(height: MaatriTheme.spacingLg),
+
+              // ── 1. HEALTH TRACKING ──
+              _buildHubCard(
+                context,
+                title: 'Health Tracking',
+                subtitle: 'Vitals & Daily Biometrics',
+                summaryText: 'Weight: 64.0 kg · Symptoms logged today',
+                icon: Icons.monitor_weight_rounded,
+                color: MaatriColors.coral,
+                onTap: () => _navigateTo(context, const HealthTrackingPage()),
+              ),
+              const SizedBox(height: MaatriTheme.spacingSm),
+
+              // ── 2. BABY MONITORING ──
+              _buildHubCard(
+                context,
+                title: 'Baby Monitoring',
+                subtitle: 'Growth & Movement Logs',
+                summaryText: 'Goal: 10 kicks · Currently Week 24 (Eggplant)',
+                icon: Icons.child_care_rounded,
+                color: MaatriColors.teal,
+                onTap: () => _navigateTo(context, const BabyMonitoringPage()),
+              ),
+              const SizedBox(height: MaatriTheme.spacingSm),
+
+              // ── 3. MEDICATION & CARE ──
+              _buildHubCard(
+                context,
+                title: 'Medication & Care',
+                subtitle: 'Schedules & Doctor Appointments',
+                summaryText: '3 active medicines · 1 vaccine pending',
+                icon: Icons.medication_rounded,
+                color: MaatriColors.goldenAmber,
+                onTap: () => _navigateTo(context, const MedicationCarePage()),
+              ),
+              const SizedBox(height: MaatriTheme.spacingSm),
+
+              // ── 4. EMOTIONAL WELLNESS ──
+              _buildHubCard(
+                context,
+                title: 'Emotional Wellness',
+                subtitle: 'Moods, Journal & Reflections',
+                summaryText: 'Logged today: 😊 Happy · 2 journal entries',
+                icon: Icons.self_improvement_rounded,
+                color: MaatriColors.lavenderDark,
+                onTap: () => _navigateTo(context, const EmotionalWellnessPage()),
+              ),
+              const SizedBox(height: MaatriTheme.spacingSm),
+
+              // ── 5. RECORDS & DOCUMENTS ──
+              _buildHubCard(
+                context,
+                title: 'Records & Documents',
+                subtitle: 'Ultrasounds, Reports & Prescriptions',
+                summaryText: '5 files secured · Click to scan new document',
+                icon: Icons.folder_open_rounded,
+                color: MaatriColors.info,
+                onTap: () => _navigateTo(context, const RecordsDocumentsPage()),
+              ),
+              const SizedBox(height: MaatriTheme.spacingSm),
+
+              // ── 6. INSIGHTS & HISTORY ──
+              _buildHubCard(
+                context,
+                title: 'Insights & History',
+                subtitle: 'Biometric Analytics & Adherence Trends',
+                summaryText: '92% medication adherence · Weight trend stable',
+                icon: Icons.trending_up_rounded,
+                color: MaatriColors.success,
+                onTap: () => _navigateTo(context, const InsightsHistoryPage()),
+              ),
+              const SizedBox(height: MaatriTheme.spacingXxl),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHubCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required String summaryText,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GlassCard(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: MaatriTypography.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.slate)),
+                  const SizedBox(height: 4),
+                  Text(
+                    summaryText,
+                    style: MaatriTypography.bodySmall.copyWith(color: color, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, color: color.withValues(alpha: 0.8), size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
