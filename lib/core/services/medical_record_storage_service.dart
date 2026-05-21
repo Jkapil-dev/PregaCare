@@ -9,11 +9,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/medical_record.dart';
 
 class MedicalRecordStorageService {
-  static const String _keyRecords = 'maatricare_medical_records_v1';
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
+  String get _keyRecords => 'maatricare_medical_records_v1_${_uid ?? "guest"}';
 
   /// Copies the picked file into the app's documents directory for persistent local storage.
   /// Returns the saved file path. On web, returns the original path as-is.
@@ -81,16 +81,16 @@ class MedicalRecordStorageService {
             .collection('records')
             .get();
 
-        if (snapshot.docs.isNotEmpty) {
-          final list = snapshot.docs
-              .map((doc) => MedicalRecord.fromJson(doc.data()))
-              .toList();
-          list.sort((a, b) => b.uploadDate.compareTo(a.uploadDate));
-          
-          // Sync local SharedPreferences cache
-          await _saveToPrefs(list);
-          return list;
-        }
+        final list = snapshot.docs
+            .map((doc) => MedicalRecord.fromJson(doc.data()))
+            .toList();
+        
+        final filteredList = list.where((r) => !['rec_1', 'rec_2', 'rec_3', 'rec_4', 'rec_5'].contains(r.id)).toList();
+        filteredList.sort((a, b) => b.uploadDate.compareTo(a.uploadDate));
+        
+        // Sync local SharedPreferences cache
+        await _saveToPrefs(filteredList);
+        return filteredList;
       } catch (e) {
         debugPrint('MedicalRecordStorageService: Failed to fetch records from Firestore, falling back to local cache: $e');
       }
@@ -105,8 +105,10 @@ class MedicalRecordStorageService {
       }
       final List<dynamic> jsonList = jsonDecode(jsonString);
       final list = jsonList.map((json) => MedicalRecord.fromJson(json)).toList();
-      list.sort((a, b) => b.uploadDate.compareTo(a.uploadDate));
-      return list;
+      
+      final filteredList = list.where((r) => !['rec_1', 'rec_2', 'rec_3', 'rec_4', 'rec_5'].contains(r.id)).toList();
+      filteredList.sort((a, b) => b.uploadDate.compareTo(a.uploadDate));
+      return filteredList;
     } catch (e) {
       debugPrint('Failed to load medical records from prefs: $e');
       return [];

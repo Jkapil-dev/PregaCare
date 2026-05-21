@@ -7,12 +7,12 @@ import '../models/vaccination.dart';
 import 'notification_service.dart';
 
 class VaccinationStorageService {
-  static const String _keyVaccinations = 'maatricare_vaccinations_v1';
   final NotificationService _notificationService = NotificationService();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
+  String get _keyVaccinations => 'maatricare_vaccinations_v1_${_uid ?? "guest"}';
 
   /// Save single vaccination record, schedule notification, and persist
   Future<void> saveVaccination(Vaccination vac) async {
@@ -67,15 +67,15 @@ class VaccinationStorageService {
             .collection('vaccinations')
             .get();
 
-        if (snapshot.docs.isNotEmpty) {
-          final list = snapshot.docs
-              .map((doc) => Vaccination.fromJson(doc.data()))
-              .toList();
-          
-          // Sync local SharedPreferences cache
-          await _saveToPrefs(list);
-          return list;
-        }
+        final list = snapshot.docs
+            .map((doc) => Vaccination.fromJson(doc.data()))
+            .toList();
+        
+        final filteredList = list.where((v) => !['vac_1', 'vac_2', 'vac_3', 'vac_4'].contains(v.id)).toList();
+        
+        // Sync local SharedPreferences cache
+        await _saveToPrefs(filteredList);
+        return filteredList;
       } catch (e) {
         debugPrint('VaccinationStorageService: Failed to fetch vaccinations from Firestore, falling back to local cache: $e');
       }
@@ -90,7 +90,8 @@ class VaccinationStorageService {
       }
 
       final List<dynamic> jsonList = jsonDecode(jsonString);
-      return jsonList.map((json) => Vaccination.fromJson(json)).toList();
+      final list = jsonList.map((json) => Vaccination.fromJson(json)).toList();
+      return list.where((v) => !['vac_1', 'vac_2', 'vac_3', 'vac_4'].contains(v.id)).toList();
     } catch (e) {
       debugPrint('Failed to load vaccinations from prefs: $e');
       return [];

@@ -42,9 +42,9 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
           if (widget.record.filePath.isNotEmpty) {
             final file = File(widget.record.filePath);
             if (!file.existsSync()) {
-              // Check if it's mock/demo
+              // Check if original file is missing
               if (widget.record.id.startsWith('rec_')) {
-                _pdfBytes = Uint8List(0); // Mock representation
+                _pdfBytes = Uint8List(0); // Placeholder
               } else {
                 setState(() {
                   _hasError = true;
@@ -273,28 +273,15 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Mock Record Preview',
+              'No Preview Available',
               style: MaatriTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'This is a pre-loaded simulation record. Previews are available for newly captured/uploaded files.',
+              'The original file is not accessible. Upload a new document to view its preview.',
               textAlign: TextAlign.center,
               style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate),
             ),
-            if (record.isPdf && kIsWeb) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Mock PDF opening simulated ✓'), backgroundColor: MaatriColors.teal),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.teal),
-                icon: const Icon(Icons.open_in_new_rounded),
-                label: const Text('Simulate Open'),
-              )
-            ]
           ],
         ),
       ),

@@ -1,12 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/medicine.dart';
 import 'notification_service.dart';
 
 class MedicineStorageService {
-  static const String _keyMedicines = 'maatricare_medicines_v2';
   final NotificationService _notificationService = NotificationService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String? get _uid => _auth.currentUser?.uid;
+  String get _keyMedicines => 'maatricare_medicines_v2_${_uid ?? "guest"}';
 
   /// Save single medicine, schedule notifications, and persist
   Future<void> saveMedicine(Medicine medicine) async {
@@ -92,7 +96,8 @@ class MedicineStorageService {
       }
 
       final List<dynamic> jsonList = jsonDecode(jsonString);
-      return jsonList.map((json) => Medicine.fromJson(json)).toList();
+      final list = jsonList.map((json) => Medicine.fromJson(json)).toList();
+      return list.where((m) => !m.id.contains('mock')).toList();
     } catch (e) {
       debugPrint('Failed to load medicines: $e');
       return [];

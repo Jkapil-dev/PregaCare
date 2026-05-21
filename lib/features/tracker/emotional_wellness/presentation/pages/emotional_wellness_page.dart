@@ -123,6 +123,33 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                   ),
                   const SizedBox(height: 8),
 
+                  // ── TODAY'S JOURNAL EMPTY STATE ──
+                  if (todayEntry == null) ...[
+                    GlassCard(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const Icon(Icons.edit_calendar_rounded, size: 40, color: MaatriColors.coral),
+                            const SizedBox(height: 10),
+                            Text(
+                              "No journal entry for today.",
+                              style: MaatriTypography.titleMedium.copyWith(fontWeight: FontWeight.bold, color: MaatriColors.charcoal),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Start writing today's thoughts.",
+                              style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // ── TODAY'S DIALOG ENTRY BUTTON ──
                   SizedBox(
                     width: double.infinity,

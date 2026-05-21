@@ -51,21 +51,29 @@ class MedicineProvider extends ChangeNotifier {
     });
   }
 
-  /// Helper to get the active user ID or fallback to guest session
-  String get _userId {
+  /// Helper to get the active user ID
+  String? get _userId {
     final user = FirebaseAuth.instance.currentUser;
-    return user?.uid ?? 'default_user_id';
+    return user?.uid;
   }
 
   /// Load medicines from Firestore
   Future<void> loadMedicines() async {
+    final uid = _userId;
+    if (uid == null) {
+      _medicines = [];
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final list = await _firestoreService.getMedicines(_userId);
-      _medicines = list;
+      final list = await _firestoreService.getMedicines(uid);
+      _medicines = list.where((m) => !m.id.contains('mock')).toList();
       _errorMessage = null;
     } catch (e) {
       _errorMessage = e.toString();
@@ -78,6 +86,9 @@ class MedicineProvider extends ChangeNotifier {
 
   /// Add or update a medicine and coordinate reminders
   Future<void> saveMedicine(Medicine medicine) async {
+    final uid = _userId;
+    if (uid == null) return;
+
     _isLoading = true;
     notifyListeners();
 
@@ -105,7 +116,7 @@ class MedicineProvider extends ChangeNotifier {
       final updatedMedicine = medicine.copyWith(notificationIds: notificationIds);
 
       // 3. Save to Firestore
-      await _firestoreService.saveMedicine(_userId, updatedMedicine);
+      await _firestoreService.saveMedicine(uid, updatedMedicine);
 
       // 4. Update local state
       if (existingIndex != -1) {
@@ -126,6 +137,9 @@ class MedicineProvider extends ChangeNotifier {
 
   /// Delete a medicine and cancel scheduled reminders
   Future<void> deleteMedicine(String id) async {
+    final uid = _userId;
+    if (uid == null) return;
+
     _isLoading = true;
     notifyListeners();
 
@@ -136,7 +150,7 @@ class MedicineProvider extends ChangeNotifier {
         await _notificationService.cancelNotifications(_medicines[index].notificationIds);
         
         // 2. Delete from Firestore
-        await _firestoreService.deleteMedicine(_userId, id);
+        await _firestoreService.deleteMedicine(uid, id);
 
         // 3. Update local list
         _medicines.removeAt(index);
@@ -158,6 +172,9 @@ class MedicineProvider extends ChangeNotifier {
     String timeLabel,
     String status,
   ) async {
+    final uid = _userId;
+    if (uid == null) return;
+
     final index = _medicines.indexWhere((m) => m.id == medicineId);
     if (index == -1) return;
 
@@ -197,7 +214,7 @@ class MedicineProvider extends ChangeNotifier {
 
     try {
       // Save changes to Firestore
-      await _firestoreService.updateAdherence(_userId, medicineId, updatedLogs);
+      await _firestoreService.updateAdherence(uid, medicineId, updatedLogs);
     } catch (e) {
       debugPrint('MedicineProvider updateAdherence remote save error: $e');
       // Rollback on failure if necessary, but typically keep local optimistic state

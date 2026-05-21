@@ -250,7 +250,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
         ),
         const SizedBox(height: 12),
         if (meds.isEmpty) ...[
-          _buildEmptyPlaceholder('No medications logged.', Icons.medication_outlined),
+          _buildEmptyPlaceholder('No medicines added yet.', Icons.medication_outlined, subtitle: 'Add your first medicine reminder.'),
         ] else ...[
           ...meds.map((med) => _buildMedicineCard(med, todayStr)),
         ]
@@ -761,7 +761,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
   }
 
   // ─── 4. COMMON HELPERS ─────────────────────────────────────────────────────
-  Widget _buildEmptyPlaceholder(String message, IconData icon) {
+  Widget _buildEmptyPlaceholder(String message, IconData icon, {String? subtitle}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -769,7 +769,11 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           children: [
             Icon(icon, size: 48, color: MaatriColors.mediumGray.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
-            Text(message, style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
+            Text(message, style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate, fontWeight: FontWeight.bold)),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(subtitle, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate.withValues(alpha: 0.7))),
+            ],
           ],
         ),
       ),

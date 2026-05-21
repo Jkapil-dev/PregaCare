@@ -6,11 +6,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/journal_entry.dart';
 
 class JournalStorageService {
-  static const String _keyJournal = 'maatricare_journals_v1';
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
+  String get _keyJournal => 'maatricare_journals_v1_${_uid ?? "guest"}';
 
   /// Save or Update a journal entry (One Day = One Journal Entry constraint)
   Future<void> saveJournalEntry(JournalEntry entry) async {
@@ -74,16 +74,16 @@ class JournalStorageService {
             .collection('journals')
             .get();
 
-        if (snapshot.docs.isNotEmpty) {
-          final list = snapshot.docs
-              .map((doc) => JournalEntry.fromJson(doc.data()))
-              .toList();
-          list.sort((a, b) => b.date.compareTo(a.date));
-          
-          // Sync local SharedPreferences cache
-          await _saveToPrefs(list);
-          return list;
-        }
+        final list = snapshot.docs
+            .map((doc) => JournalEntry.fromJson(doc.data()))
+            .toList();
+        
+        final filteredList = list.where((j) => !['journal_1', 'journal_2', 'journal_3'].contains(j.id)).toList();
+        filteredList.sort((a, b) => b.date.compareTo(a.date));
+        
+        // Sync local SharedPreferences cache
+        await _saveToPrefs(filteredList);
+        return filteredList;
       } catch (e) {
         debugPrint('JournalStorageService: Failed to fetch journals from Firestore, falling back to local cache: $e');
       }
@@ -100,9 +100,11 @@ class JournalStorageService {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       final list = jsonList.map((json) => JournalEntry.fromJson(json)).toList();
       
+      final filteredList = list.where((j) => !['journal_1', 'journal_2', 'journal_3'].contains(j.id)).toList();
+      
       // Sort newest first
-      list.sort((a, b) => b.date.compareTo(a.date));
-      return list;
+      filteredList.sort((a, b) => b.date.compareTo(a.date));
+      return filteredList;
     } catch (e) {
       debugPrint('Failed to load journals from prefs: $e');
       return [];

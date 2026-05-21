@@ -7,12 +7,12 @@ import '../models/consultation.dart';
 import 'notification_service.dart';
 
 class ConsultationStorageService {
-  static const String _keyConsultations = 'maatricare_consultations_v1';
   final NotificationService _notificationService = NotificationService();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
+  String get _keyConsultations => 'maatricare_consultations_v1_${_uid ?? "guest"}';
 
   /// Save single consultation record, schedule notification, and persist
   Future<void> saveConsultation(Consultation con) async {
@@ -67,15 +67,15 @@ class ConsultationStorageService {
             .collection('appointments')
             .get();
 
-        if (snapshot.docs.isNotEmpty) {
-          final list = snapshot.docs
-              .map((doc) => Consultation.fromJson(doc.data()))
-              .toList();
-          
-          // Sync local SharedPreferences cache
-          await _saveToPrefs(list);
-          return list;
-        }
+        final list = snapshot.docs
+            .map((doc) => Consultation.fromJson(doc.data()))
+            .toList();
+        
+        final filteredList = list.where((c) => !['con_1', 'con_2', 'con_3'].contains(c.id)).toList();
+        
+        // Sync local SharedPreferences cache
+        await _saveToPrefs(filteredList);
+        return filteredList;
       } catch (e) {
         debugPrint('ConsultationStorageService: Failed to fetch appointments from Firestore, falling back to local cache: $e');
       }
@@ -90,7 +90,8 @@ class ConsultationStorageService {
       }
 
       final List<dynamic> jsonList = jsonDecode(jsonString);
-      return jsonList.map((json) => Consultation.fromJson(json)).toList();
+      final list = jsonList.map((json) => Consultation.fromJson(json)).toList();
+      return list.where((c) => !['con_1', 'con_2', 'con_3'].contains(c.id)).toList();
     } catch (e) {
       debugPrint('Failed to load consultations from prefs: $e');
       return [];
