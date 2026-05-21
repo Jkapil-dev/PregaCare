@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
+
+// Providers
+import 'package:maatricare/core/providers/user_provider.dart';
+import 'package:maatricare/core/providers/medicine_provider.dart';
+import 'package:maatricare/core/providers/mood_provider.dart';
+import 'package:maatricare/core/providers/journal_provider.dart';
+import 'package:maatricare/core/providers/record_provider.dart';
 
 // Sections Sub-pages
 import 'package:maatricare/features/tracker/health_tracking/presentation/pages/health_tracking_page.dart';
@@ -24,6 +32,12 @@ class TrackerHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = context.watch<UserProvider>();
+    final medicineProvider = context.watch<MedicineProvider>();
+    final moodProvider = context.watch<MoodProvider>();
+    final journalProvider = context.watch<JournalProvider>();
+    final recordProvider = context.watch<RecordProvider>();
+
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       body: SafeArea(
@@ -43,7 +57,7 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Health Tracking',
                 subtitle: 'Vitals & Daily Biometrics',
-                summaryText: 'Weight: 64.0 kg · Symptoms logged today',
+                summaryText: 'Weight: ${userProvider.weight > 0 ? '${userProvider.weight.toStringAsFixed(1)} kg' : 'Not set'} · Click to log vitals',
                 icon: Icons.monitor_weight_rounded,
                 color: MaatriColors.coral,
                 onTap: () => _navigateTo(context, const HealthTrackingPage()),
@@ -55,7 +69,7 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Baby Monitoring',
                 subtitle: 'Growth & Movement Logs',
-                summaryText: 'Goal: 10 kicks · Currently Week 24 (Eggplant)',
+                summaryText: 'Goal: 10 kicks · Currently Week ${userProvider.pregnancyWeek} (${userProvider.babySize})',
                 icon: Icons.child_care_rounded,
                 color: MaatriColors.teal,
                 onTap: () => _navigateTo(context, const BabyMonitoringPage()),
@@ -67,7 +81,7 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Medication & Care',
                 subtitle: 'Schedules & Doctor Appointments',
-                summaryText: '3 active medicines · 1 vaccine pending',
+                summaryText: '${medicineProvider.medicines.length} active medicines · Doctor visits scheduled',
                 icon: Icons.medication_rounded,
                 color: MaatriColors.goldenAmber,
                 onTap: () => _navigateTo(context, const MedicationCarePage()),
@@ -79,7 +93,7 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Emotional Wellness',
                 subtitle: 'Moods, Journal & Reflections',
-                summaryText: 'Logged today: 😊 Happy · 2 journal entries',
+                summaryText: 'Mood today: ${moodProvider.latestMood} · ${journalProvider.journals.length} journal entries',
                 icon: Icons.self_improvement_rounded,
                 color: MaatriColors.lavenderDark,
                 onTap: () => _navigateTo(context, const EmotionalWellnessPage()),
@@ -91,7 +105,7 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Records & Documents',
                 subtitle: 'Ultrasounds, Reports & Prescriptions',
-                summaryText: '5 files secured · Click to scan new document',
+                summaryText: '${recordProvider.records.length} files secured · Click to view documents',
                 icon: Icons.folder_open_rounded,
                 color: MaatriColors.info,
                 onTap: () => _navigateTo(context, const RecordsDocumentsPage()),
@@ -103,7 +117,7 @@ class TrackerHomePage extends StatelessWidget {
                 context,
                 title: 'Insights & History',
                 subtitle: 'Biometric Analytics & Adherence Trends',
-                summaryText: '92% medication adherence · Weight trend stable',
+                summaryText: 'Pregnancy Week ${userProvider.pregnancyWeek} insights and history trends',
                 icon: Icons.trending_up_rounded,
                 color: MaatriColors.success,
                 onTap: () => _navigateTo(context, const InsightsHistoryPage()),

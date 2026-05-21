@@ -1,10 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/journal_entry.dart';
 
 class JournalStorageService {
   static const String _keyJournal = 'maatricare_journals_v1';
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String? get _uid => _auth.currentUser?.uid;
 
   /// Save or Update a journal entry (One Day = One Journal Entry constraint)
   Future<void> saveJournalEntry(JournalEntry entry) async {
@@ -21,11 +27,69 @@ class JournalStorageService {
       list.insert(0, updatedEntry);
     }
 
+    // Always update SharedPreferences cache first
     await _saveToPrefs(list);
+
+    // Save to Firestore if authenticated
+    final uid = _uid;
+    if (uid != null) {
+      try {
+        debugPrint('JournalStorageService: Syncing journal entry to Firestore under users/$uid/journals');
+        // 1. Save journal entry to subcollection users/{uid}/journals
+        await _db
+            .collection('users')
+            .doc(uid)
+            .collection('journals')
+            .doc(updatedEntry.id)
+            .set(updatedEntry.toJson());
+
+        // 2. Also log daily mood in users/{uid}/moods/{date}
+        if (updatedEntry.mood.isNotEmpty) {
+          await _db
+              .collection('users')
+              .doc(uid)
+              .collection('moods')
+              .doc(updatedEntry.date)
+              .set({
+            'date': updatedEntry.date,
+            'mood': updatedEntry.mood,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (e) {
+        debugPrint('JournalStorageService: Firestore sync error: $e');
+      }
+    }
   }
 
   /// Load all persisted journal entries, sorted chronologically (newest first)
   Future<List<JournalEntry>> loadJournalEntries() async {
+    final uid = _uid;
+    if (uid != null) {
+      try {
+        debugPrint('JournalStorageService: Fetching journal entries from Firestore under users/$uid/journals');
+        final snapshot = await _db
+            .collection('users')
+            .doc(uid)
+            .collection('journals')
+            .get();
+
+        if (snapshot.docs.isNotEmpty) {
+          final list = snapshot.docs
+              .map((doc) => JournalEntry.fromJson(doc.data()))
+              .toList();
+          list.sort((a, b) => b.date.compareTo(a.date));
+          
+          // Sync local SharedPreferences cache
+          await _saveToPrefs(list);
+          return list;
+        }
+      } catch (e) {
+        debugPrint('JournalStorageService: Failed to fetch journals from Firestore, falling back to local cache: $e');
+      }
+    }
+
+    // Fallback/offline/unauthenticated local load
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyJournal);
@@ -40,7 +104,7 @@ class JournalStorageService {
       list.sort((a, b) => b.date.compareTo(a.date));
       return list;
     } catch (e) {
-      debugPrint('Failed to load journals: $e');
+      debugPrint('Failed to load journals from prefs: $e');
       return _getMockJournals();
     }
   }
@@ -50,8 +114,32 @@ class JournalStorageService {
     final list = await loadJournalEntries();
     final index = list.indexWhere((item) => item.id == id);
     if (index != -1) {
+      final entry = list[index];
       list.removeAt(index);
       await _saveToPrefs(list);
+
+      final uid = _uid;
+      if (uid != null) {
+        try {
+          debugPrint('JournalStorageService: Deleting journal entry $id from Firestore');
+          await _db
+              .collection('users')
+              .doc(uid)
+              .collection('journals')
+              .doc(id)
+              .delete();
+
+          // Also delete the corresponding mood log for that date if applicable
+          await _db
+              .collection('users')
+              .doc(uid)
+              .collection('moods')
+              .doc(entry.date)
+              .delete();
+        } catch (e) {
+          debugPrint('JournalStorageService: Firestore delete error: $e');
+        }
+      }
     }
   }
 
@@ -60,11 +148,27 @@ class JournalStorageService {
     final list = await loadJournalEntries();
     final index = list.indexWhere((item) => item.id == id);
     if (index != -1) {
-      list[index] = list[index].copyWith(
+      final updated = list[index].copyWith(
         isBookmarked: !list[index].isBookmarked,
         updatedAt: DateTime.now(),
       );
+      list[index] = updated;
       await _saveToPrefs(list);
+
+      final uid = _uid;
+      if (uid != null) {
+        try {
+          debugPrint('JournalStorageService: Syncing bookmark toggle to Firestore');
+          await _db
+              .collection('users')
+              .doc(uid)
+              .collection('journals')
+              .doc(id)
+              .set(updated.toJson());
+        } catch (e) {
+          debugPrint('JournalStorageService: Firestore bookmark sync error: $e');
+        }
+      }
     }
   }
 

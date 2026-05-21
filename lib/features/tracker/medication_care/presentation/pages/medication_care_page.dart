@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
@@ -10,10 +11,10 @@ import 'package:maatricare/core/models/medicine.dart';
 import 'package:maatricare/core/models/vaccination.dart';
 import 'package:maatricare/core/models/consultation.dart';
 
-// Services
-import 'package:maatricare/core/services/medicine_storage_service.dart';
+// Providers & Services
+import 'package:maatricare/core/providers/medicine_provider.dart';
+import 'package:maatricare/core/providers/appointment_provider.dart';
 import 'package:maatricare/core/services/vaccination_storage_service.dart';
-import 'package:maatricare/core/services/consultation_storage_service.dart';
 
 class MedicationCarePage extends StatefulWidget {
   const MedicationCarePage({super.key});
@@ -23,13 +24,9 @@ class MedicationCarePage extends StatefulWidget {
 }
 
 class _MedicationCarePageState extends State<MedicationCarePage> {
-  final MedicineStorageService _medicineService = MedicineStorageService();
   final VaccinationStorageService _vaccineService = VaccinationStorageService();
-  final ConsultationStorageService _consultationService = ConsultationStorageService();
 
-  List<Medicine> _meds = [];
   List<Vaccination> _vaccines = [];
-  List<Consultation> _consultations = [];
 
   bool _isLoading = true;
   int _activeTab = 0; // 0 = Medicines, 1 = Vaccinations, 2 = Consultations
@@ -38,27 +35,28 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
   void initState() {
     super.initState();
     _loadAllData();
+    // Schedule asynchronous loading of dynamic medicines and appointments from Firestore
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<MedicineProvider>(context, listen: false).loadMedicines();
+      Provider.of<AppointmentProvider>(context, listen: false).loadAppointments();
+    });
   }
 
   Future<void> _loadAllData() async {
     setState(() => _isLoading = true);
-    final medsList = await _medicineService.loadMedicines();
     final vacList = await _vaccineService.loadVaccinations();
-    final conList = await _consultationService.loadConsultations();
 
     setState(() {
-      _meds = medsList;
       _vaccines = vacList;
-      _consultations = conList;
       _isLoading = false;
     });
   }
 
   /// Calculates dynamic total adherence rate across all saved medicines
-  double _calculateOverallAdherence() {
+  double _calculateOverallAdherence(List<Medicine> meds) {
     int totalTaken = 0;
     int totalMissed = 0;
-    for (final med in _meds) {
+    for (final med in meds) {
       med.adherenceLogs.forEach((date, statusMap) {
         statusMap.forEach((time, status) {
           if (status == 'Taken') totalTaken++;
@@ -75,7 +73,18 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-    final overallAdherence = _calculateOverallAdherence();
+    
+    // Obtain reactive state changes of medications from MedicineProvider
+    final medicineProvider = Provider.of<MedicineProvider>(context);
+    final meds = medicineProvider.medicines;
+    final isMedsLoading = medicineProvider.isLoading;
+    final overallAdherence = _calculateOverallAdherence(meds);
+
+    final appointmentProvider = Provider.of<AppointmentProvider>(context);
+    final consultations = appointmentProvider.appointments;
+    final isAppointmentsLoading = appointmentProvider.isLoading;
+
+    final showSpinner = _isLoading || (isMedsLoading && meds.isEmpty) || (isAppointmentsLoading && consultations.isEmpty);
 
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
@@ -86,7 +95,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _isLoading
+      body: showSpinner
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(MaatriTheme.spacingMd),
@@ -108,11 +117,11 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
 
                   // ── ACTIVE CONTENT PANEL ──
                   if (_activeTab == 0) ...[
-                    _buildMedicinesSection(todayStr),
+                    _buildMedicinesSection(meds, todayStr),
                   ] else if (_activeTab == 1) ...[
                     _buildVaccinationsSection(),
                   ] else ...[
-                    _buildConsultationsSection(),
+                    _buildConsultationsSection(consultations),
                   ],
                   const SizedBox(height: MaatriTheme.spacingXxl),
                 ],
@@ -220,7 +229,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
   }
 
   // ─── 1. MEDICINES SUB-MODULE ───────────────────────────────────────────────
-  Widget _buildMedicinesSection(String todayStr) {
+  Widget _buildMedicinesSection(List<Medicine> meds, String todayStr) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -240,10 +249,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           ],
         ),
         const SizedBox(height: 12),
-        if (_meds.isEmpty) ...[
+        if (meds.isEmpty) ...[
           _buildEmptyPlaceholder('No medications logged.', Icons.medication_outlined),
         ] else ...[
-          ..._meds.map((med) => _buildMedicineCard(med, todayStr)),
+          ...meds.map((med) => _buildMedicineCard(med, todayStr)),
         ]
       ],
     );
@@ -371,8 +380,8 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                       children: [
                         InkWell(
                           onTap: () async {
-                            await _medicineService.updateAdherence(med.id, todayStr, timeLabel, 'Taken');
-                            _loadAllData();
+                            await Provider.of<MedicineProvider>(context, listen: false)
+                                .updateAdherence(med.id, todayStr, timeLabel, 'Taken');
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -386,8 +395,8 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                         ),
                         InkWell(
                           onTap: () async {
-                            await _medicineService.updateAdherence(med.id, todayStr, timeLabel, 'Missed');
-                            _loadAllData();
+                            await Provider.of<MedicineProvider>(context, listen: false)
+                                .updateAdherence(med.id, todayStr, timeLabel, 'Missed');
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -401,8 +410,8 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                         ),
                         InkWell(
                           onTap: () async {
-                            await _medicineService.updateAdherence(med.id, todayStr, timeLabel, 'Pending');
-                            _loadAllData();
+                            await Provider.of<MedicineProvider>(context, listen: false)
+                                .updateAdherence(med.id, todayStr, timeLabel, 'Pending');
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -592,7 +601,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
   }
 
   // ─── 3. CONSULTATIONS SUB-MODULE ───────────────────────────────────────────
-  Widget _buildConsultationsSection() {
+  Widget _buildConsultationsSection(List<Consultation> consultations) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -612,10 +621,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           ],
         ),
         const SizedBox(height: 12),
-        if (_consultations.isEmpty) ...[
+        if (consultations.isEmpty) ...[
           _buildEmptyPlaceholder('No consultations scheduled.', Icons.event_available_outlined),
         ] else ...[
-          ..._consultations.map((con) => _buildConsultationCard(con)),
+          ...consultations.map((con) => _buildConsultationCard(con)),
         ]
       ],
     );
@@ -969,9 +978,8 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                           adherenceLogs: isEditing ? existingMed.adherenceLogs : const {},
                         );
 
-                        await _medicineService.saveMedicine(med);
+                        await Provider.of<MedicineProvider>(context, listen: false).saveMedicine(med);
                         Navigator.pop(ctx);
-                        _loadAllData();
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -1328,9 +1336,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                         consultationStatus: status,
                       );
 
-                      await _consultationService.saveConsultation(con);
-                      Navigator.pop(ctx);
-                      _loadAllData();
+                      await Provider.of<AppointmentProvider>(context, listen: false).saveAppointment(con);
+                      if (mounted) {
+                        Navigator.pop(ctx);
+                      }
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -1363,8 +1372,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _medicineService.deleteMedicine(id);
-              _loadAllData();
+              await Provider.of<MedicineProvider>(context, listen: false).deleteMedicine(id);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Medication removed.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating),
               );
@@ -1417,11 +1425,12 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _consultationService.deleteConsultation(id);
-              _loadAllData();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Consultation appointment removed.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating),
-              );
+              await Provider.of<AppointmentProvider>(context, listen: false).deleteAppointment(id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Consultation appointment removed.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.danger),
             child: const Text('Delete'),

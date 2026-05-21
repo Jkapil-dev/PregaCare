@@ -1,13 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../providers/auth_provider.dart';
+import '../../../../core/providers/user_provider.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
+
+  String _getPregnancySubtitle(int week, String dueDateStr) {
+    String subText = 'Week $week';
+    if (dueDateStr.isNotEmpty) {
+      try {
+        final date = DateTime.parse(dueDateStr);
+        final formatted = DateFormat('MMMM yyyy').format(date);
+        subText += ' · Due $formatted';
+      } catch (_) {
+        subText += ' · Due $dueDateStr';
+      }
+    }
+    return subText;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final userProvider = context.watch<UserProvider>();
+    final displayName = userProvider.displayName.isNotEmpty
+        ? userProvider.displayName
+        : (userProvider.email.isNotEmpty ? userProvider.email.split('@')[0] : 'Guest User');
+
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
@@ -17,11 +42,14 @@ class ProfilePage extends StatelessWidget {
           width: double.infinity, padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(gradient: MaatriColors.primaryGradient, borderRadius: BorderRadius.circular(20), boxShadow: MaatriTheme.glowCoral),
           child: Column(children: [
-            CircleAvatar(radius: 40, backgroundColor: Colors.white.withValues(alpha: 0.2), child: const Icon(Icons.person_rounded, color: Colors.white, size: 44)),
+            CircleAvatar(radius: 40, backgroundColor: Colors.white.withOpacity(0.2), child: const Icon(Icons.person_rounded, color: Colors.white, size: 44)),
             const SizedBox(height: 12),
-            Text('Priya Sharma', style: MaatriTypography.headlineMedium.copyWith(color: Colors.white)),
+            Text(displayName, style: MaatriTypography.headlineMedium.copyWith(color: Colors.white)),
             const SizedBox(height: 4),
-            Text('Week 24 · Due May 2026', style: MaatriTypography.bodyMedium.copyWith(color: Colors.white.withValues(alpha: 0.9))),
+            Text(
+              _getPregnancySubtitle(userProvider.pregnancyWeek, userProvider.dueDateString),
+              style: MaatriTypography.bodyMedium.copyWith(color: Colors.white.withOpacity(0.9)),
+            ),
             const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               _StatBadge(label: 'BP Logs', value: '24'),
@@ -50,7 +78,12 @@ class ProfilePage extends StatelessWidget {
         const SizedBox(height: 8),
         _MenuItem(icon: Icons.help_outline_rounded, title: 'Help & Support', subtitle: 'FAQs, contact us', color: MaatriColors.teal),
         const SizedBox(height: 24),
-        TextButton(onPressed: () {}, child: Text('Sign Out', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.danger))),
+        TextButton(
+          onPressed: () async {
+            await authProvider.logout();
+          },
+          child: Text('Sign Out', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.danger)),
+        ),
         const SizedBox(height: 8),
         Text('MaatriCare v1.0.0', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.mediumGray)),
         const SizedBox(height: 24),

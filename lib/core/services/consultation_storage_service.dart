@@ -1,12 +1,18 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/consultation.dart';
 import 'notification_service.dart';
 
 class ConsultationStorageService {
   static const String _keyConsultations = 'maatricare_consultations_v1';
   final NotificationService _notificationService = NotificationService();
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String? get _uid => _auth.currentUser?.uid;
 
   /// Save single consultation record, schedule notification, and persist
   Future<void> saveConsultation(Consultation con) async {
@@ -29,11 +35,53 @@ class ConsultationStorageService {
       list.insert(0, con);
     }
 
+    // Update SharedPreferences cache first
     await _saveToPrefs(list);
+
+    // Save to Firestore if authenticated
+    final uid = _uid;
+    if (uid != null) {
+      try {
+        debugPrint('ConsultationStorageService: Syncing consultation ${con.id} to Firestore under users/$uid/appointments');
+        await _db
+            .collection('users')
+            .doc(uid)
+            .collection('appointments')
+            .doc(con.id)
+            .set(con.toJson());
+      } catch (e) {
+        debugPrint('ConsultationStorageService: Firestore sync error: $e');
+      }
+    }
   }
 
   /// Load all persisted consultations
   Future<List<Consultation>> loadConsultations() async {
+    final uid = _uid;
+    if (uid != null) {
+      try {
+        debugPrint('ConsultationStorageService: Fetching appointments from Firestore under users/$uid/appointments');
+        final snapshot = await _db
+            .collection('users')
+            .doc(uid)
+            .collection('appointments')
+            .get();
+
+        if (snapshot.docs.isNotEmpty) {
+          final list = snapshot.docs
+              .map((doc) => Consultation.fromJson(doc.data()))
+              .toList();
+          
+          // Sync local SharedPreferences cache
+          await _saveToPrefs(list);
+          return list;
+        }
+      } catch (e) {
+        debugPrint('ConsultationStorageService: Failed to fetch appointments from Firestore, falling back to local cache: $e');
+      }
+    }
+
+    // Fallback/offline/unauthenticated local load
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyConsultations);
@@ -44,7 +92,7 @@ class ConsultationStorageService {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       return jsonList.map((json) => Consultation.fromJson(json)).toList();
     } catch (e) {
-      debugPrint('Failed to load consultations: $e');
+      debugPrint('Failed to load consultations from prefs: $e');
       return _getMockConsultations();
     }
   }
@@ -57,6 +105,21 @@ class ConsultationStorageService {
       await _notificationService.cancelNotifications([list[index].notificationId]);
       list.removeAt(index);
       await _saveToPrefs(list);
+
+      final uid = _uid;
+      if (uid != null) {
+        try {
+          debugPrint('ConsultationStorageService: Deleting appointment $id from Firestore');
+          await _db
+              .collection('users')
+              .doc(uid)
+              .collection('appointments')
+              .doc(id)
+              .delete();
+        } catch (e) {
+          debugPrint('ConsultationStorageService: Firestore delete error: $e');
+        }
+      }
     }
   }
 

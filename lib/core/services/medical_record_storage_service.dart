@@ -4,10 +4,16 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/medical_record.dart';
 
 class MedicalRecordStorageService {
   static const String _keyRecords = 'maatricare_medical_records_v1';
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String? get _uid => _auth.currentUser?.uid;
 
   /// Copies the picked file into the app's documents directory for persistent local storage.
   /// Returns the saved file path. On web, returns the original path as-is.
@@ -42,11 +48,55 @@ class MedicalRecordStorageService {
     } else {
       list.insert(0, record);
     }
+    
+    // Update SharedPreferences cache first
     await _saveToPrefs(list);
+
+    // Save to Firestore if authenticated
+    final uid = _uid;
+    if (uid != null) {
+      try {
+        debugPrint('MedicalRecordStorageService: Syncing medical record ${record.id} to Firestore under users/$uid/records');
+        await _db
+            .collection('users')
+            .doc(uid)
+            .collection('records')
+            .doc(record.id)
+            .set(record.toJson());
+      } catch (e) {
+        debugPrint('MedicalRecordStorageService: Firestore sync error: $e');
+      }
+    }
   }
 
   /// Load all persisted medical records, sorted newest first
   Future<List<MedicalRecord>> loadRecords() async {
+    final uid = _uid;
+    if (uid != null) {
+      try {
+        debugPrint('MedicalRecordStorageService: Fetching records from Firestore under users/$uid/records');
+        final snapshot = await _db
+            .collection('users')
+            .doc(uid)
+            .collection('records')
+            .get();
+
+        if (snapshot.docs.isNotEmpty) {
+          final list = snapshot.docs
+              .map((doc) => MedicalRecord.fromJson(doc.data()))
+              .toList();
+          list.sort((a, b) => b.uploadDate.compareTo(a.uploadDate));
+          
+          // Sync local SharedPreferences cache
+          await _saveToPrefs(list);
+          return list;
+        }
+      } catch (e) {
+        debugPrint('MedicalRecordStorageService: Failed to fetch records from Firestore, falling back to local cache: $e');
+      }
+    }
+
+    // Fallback/offline/unauthenticated local load
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyRecords);
@@ -58,7 +108,7 @@ class MedicalRecordStorageService {
       list.sort((a, b) => b.uploadDate.compareTo(a.uploadDate));
       return list;
     } catch (e) {
-      debugPrint('Failed to load medical records: $e');
+      debugPrint('Failed to load medical records from prefs: $e');
       return _getMockRecords();
     }
   }
@@ -81,6 +131,21 @@ class MedicalRecordStorageService {
       }
       list.removeAt(index);
       await _saveToPrefs(list);
+
+      final uid = _uid;
+      if (uid != null) {
+        try {
+          debugPrint('MedicalRecordStorageService: Deleting record $id from Firestore');
+          await _db
+              .collection('users')
+              .doc(uid)
+              .collection('records')
+              .doc(id)
+              .delete();
+        } catch (e) {
+          debugPrint('MedicalRecordStorageService: Firestore delete error: $e');
+        }
+      }
     }
   }
 

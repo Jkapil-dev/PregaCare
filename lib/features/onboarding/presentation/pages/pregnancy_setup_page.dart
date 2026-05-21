@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:provider/provider.dart';
+import '../../../../core/providers/user_provider.dart';
+import '../../../../providers/auth_provider.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
@@ -19,6 +24,7 @@ class _PregnancySetupPageState extends State<PregnancySetupPage> {
   final _pageController = PageController();
   int _currentStep = 0;
   static const _totalSteps = 5;
+  bool _isSaving = false;
 
   // Step 1: Personal info
   final _nameController = TextEditingController();
@@ -79,7 +85,7 @@ class _PregnancySetupPageState extends State<PregnancySetupPage> {
     }
   }
 
-  void _nextStep() {
+  Future<void> _nextStep() async {
     if (_currentStep < _totalSteps - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
@@ -87,7 +93,50 @@ class _PregnancySetupPageState extends State<PregnancySetupPage> {
       );
       setState(() => _currentStep++);
     } else {
-      context.go(AppRoutes.home);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No authenticated user found. Please login.')),
+        );
+        return;
+      }
+
+      setState(() => _isSaving = true);
+
+      try {
+        final profileData = {
+          'onboardingCompleted': true,
+          'displayName': _nameController.text.trim(),
+          'age': int.tryParse(_ageController.text) ?? 0,
+          'height': double.tryParse(_heightController.text) ?? 0.0,
+          'weight': double.tryParse(_weightController.text) ?? 0.0,
+          'lmpDate': _lmpDate?.toIso8601String(),
+          'dueDate': _dueDate?.toIso8601String(),
+          'isFirstPregnancy': _isFirstPregnancy,
+          'pregnancyNumber': _isFirstPregnancy ? 1 : _pregnancyNumber,
+          'conditions': _conditions.toList(),
+          'pregnancyWeek': _currentWeek,
+          'trimester': _currentWeek <= 13 ? 1 : (_currentWeek <= 26 ? 2 : 3),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        if (!mounted) return;
+        final userProvider = context.read<UserProvider>();
+        await userProvider.updateProfile(profileData);
+
+        if (!mounted) return;
+        context.go(AppRoutes.home);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to save profile: $e')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+      }
     }
   }
 
@@ -173,11 +222,20 @@ class _PregnancySetupPageState extends State<PregnancySetupPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: _canProceed ? _nextStep : null,
-                child: Text(
-                  _currentStep == _totalSteps - 1 ? 'Start My Journey' : 'Continue',
-                  style: MaatriTypography.labelLarge.copyWith(color: Colors.white, fontSize: 16),
-                ),
+                onPressed: (_canProceed && !_isSaving) ? _nextStep : null,
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        _currentStep == _totalSteps - 1 ? 'Start My Journey' : 'Continue',
+                        style: MaatriTypography.labelLarge.copyWith(color: Colors.white, fontSize: 16),
+                      ),
               ),
             ),
           ),

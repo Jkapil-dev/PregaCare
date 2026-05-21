@@ -7,17 +7,32 @@ import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/navigation/app_router.dart';
 
 /// Home Dashboard - the main hub of MaatriCare
+import 'package:provider/provider.dart';
+import '../../../../core/models/consultation.dart';
+import '../../../../core/providers/user_provider.dart';
+import '../../../../core/providers/appointment_provider.dart';
+import '../../../../core/providers/medicine_provider.dart';
+import '../../../../core/providers/mood_provider.dart';
+import '../../../../core/providers/journal_provider.dart';
+
+/// Home Dashboard - the main hub of MaatriCare
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
-  // Mock data — in production these come from state/BLoC
-  int get _currentWeek => 24;
-  int get _trimester => 2;
-  double get _progress => 24 / 40;
-  String get _babySize => '🌽 Corn on the cob';
-
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final apptProvider = Provider.of<AppointmentProvider>(context);
+    final medProvider = Provider.of<MedicineProvider>(context);
+    final moodProvider = Provider.of<MoodProvider>(context);
+    final journalProvider = Provider.of<JournalProvider>(context);
+
+    final currentWeek = userProvider.pregnancyWeek;
+    final trimester = userProvider.trimester;
+    final progress = userProvider.progress;
+    final babySize = userProvider.babySize;
+    final displayName = userProvider.displayName.isNotEmpty ? userProvider.displayName : 'Mama';
+
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       body: SafeArea(
@@ -27,19 +42,19 @@ class DashboardPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: MaatriTheme.spacingMd),
-              _buildGreeting(context),
+              _buildGreeting(context, displayName),
               const SizedBox(height: MaatriTheme.spacingLg),
-              _buildWeekCard(context),
+              _buildWeekCard(context, currentWeek, trimester, progress, babySize),
               const SizedBox(height: MaatriTheme.spacingMd),
-              _buildAppointmentCard(context),
+              _buildAppointmentCard(context, apptProvider.nextAppointment),
               const SizedBox(height: MaatriTheme.spacingLg),
-              _buildQuickActions(context),
+              _buildQuickActions(context, trimester),
               const SizedBox(height: MaatriTheme.spacingLg),
               _buildDailyInsight(context),
               const SizedBox(height: MaatriTheme.spacingMd),
               _buildAIRecommendation(context),
               const SizedBox(height: MaatriTheme.spacingMd),
-              _buildWeeklySummary(context),
+              _buildWeeklySummary(context, medProvider, userProvider, moodProvider, journalProvider),
               const SizedBox(height: MaatriTheme.spacingXl),
             ],
           ),
@@ -48,7 +63,7 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildGreeting(BuildContext context) {
+  Widget _buildGreeting(BuildContext context, String displayName) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
     return Row(
@@ -56,7 +71,7 @@ class DashboardPage extends StatelessWidget {
       children: [
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('$greeting,', style: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.slate)),
-          Text('Priya', style: MaatriTypography.headlineLarge.copyWith(color: MaatriColors.charcoal)),
+          Text(displayName, style: MaatriTypography.headlineLarge.copyWith(color: MaatriColors.charcoal)),
         ]),
         Row(children: [
           IconButton(onPressed: () {}, icon: const Icon(Icons.search_rounded), color: MaatriColors.charcoal),
@@ -69,26 +84,29 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildWeekCard(BuildContext context) {
+  Widget _buildWeekCard(BuildContext context, int week, int trimester, double progress, String babySize) {
     return PrimaryCard(
       onTap: () => context.push(AppRoutes.timeline),
       padding: const EdgeInsets.all(MaatriTheme.spacingLg),
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Week $_currentWeek', style: MaatriTypography.weekCounter.copyWith(color: Colors.white)),
+          Text('Week $week', style: MaatriTypography.weekCounter.copyWith(color: Colors.white)),
           const SizedBox(height: 4),
-          Text('Trimester $_trimester', style: MaatriTypography.titleMedium.copyWith(color: Colors.white.withValues(alpha: 0.9))),
+          Text('Trimester $trimester', style: MaatriTypography.titleMedium.copyWith(color: Colors.white.withValues(alpha: 0.9))),
           const SizedBox(height: MaatriTheme.spacingSm),
           Text('Baby is the size of a', style: MaatriTypography.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.8))),
-          Text(_babySize, style: MaatriTypography.titleLarge.copyWith(color: Colors.white)),
+          Text(babySize, style: MaatriTypography.titleLarge.copyWith(color: Colors.white)),
         ])),
-        ProgressRing(progress: _progress, size: 70, child: Text('${(_progress * 100).toInt()}%', style: MaatriTypography.labelLarge.copyWith(color: Colors.white))),
+        ProgressRing(progress: progress, size: 70, child: Text('${(progress * 100).toInt()}%', style: MaatriTypography.labelLarge.copyWith(color: Colors.white))),
       ]),
     );
   }
 
   /// Appointment card → navigates to Tracker → Medication & Care (Consultations tab)
-  Widget _buildAppointmentCard(BuildContext context) {
+  Widget _buildAppointmentCard(BuildContext context, Consultation? nextAppt) {
+    final String doctorNameText = nextAppt != null ? nextAppt.doctorName : 'No Upcoming Consultations';
+    final String subtitleText = nextAppt != null ? _getAppointmentSub(nextAppt) : 'Schedule your check-up';
+
     return GlassCard(
       onTap: () => context.push(AppRoutes.medicationCare),
       child: Row(children: [
@@ -100,17 +118,31 @@ class DashboardPage extends StatelessWidget {
         const SizedBox(width: MaatriTheme.spacingMd),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Next Appointment', style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.slate)),
-          Text('Dr. Shah · 3 days', style: MaatriTypography.titleMedium),
+          Text('$doctorNameText · $subtitleText', style: MaatriTypography.titleMedium),
         ])),
         const Icon(Icons.chevron_right_rounded, color: MaatriColors.mediumGray),
       ]),
     );
   }
 
+  String _getAppointmentSub(Consultation appt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final apptDate = DateTime(appt.appointmentDate.year, appt.appointmentDate.month, appt.appointmentDate.day);
+    final diffDays = apptDate.difference(today).inDays;
+
+    final timeStr = appt.appointmentTime.isNotEmpty ? " at ${appt.appointmentTime}" : "";
+    if (diffDays == 0) return 'Today$timeStr';
+    if (diffDays == 1) return 'Tomorrow$timeStr';
+    if (diffDays > 1) return 'in $diffDays days';
+    if (diffDays < 0) return 'Passed';
+    return appt.specialization;
+  }
+
   /// Quick action shortcuts with trimester-aware health/baby card
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context, int trimester) {
     // Dynamic trimester-based card
-    final bool isThirdTrimester = _trimester == 3;
+    final bool isThirdTrimester = trimester == 3;
     final String healthLabel = isThirdTrimester ? 'Baby Health' : 'Mother Health';
     final IconData healthIcon = isThirdTrimester ? Icons.child_care_rounded : Icons.monitor_weight_rounded;
     final String healthRoute = isThirdTrimester ? AppRoutes.babyMonitoring : AppRoutes.healthTracking;
@@ -176,16 +208,41 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildWeeklySummary(BuildContext context) {
+  Widget _buildWeeklySummary(BuildContext context, MedicineProvider medProvider, UserProvider userProvider, MoodProvider moodProvider, JournalProvider journalProvider) {
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    int totalMedsToday = 0;
+    int takenMedsToday = 0;
+    for (final med in medProvider.medicines) {
+      if (med.isExpired) continue;
+      final todayDateOnly = DateTime(now.year, now.month, now.day);
+      final startOnly = DateTime(med.startDate.year, med.startDate.month, med.startDate.day);
+      final endOnly = DateTime(med.endDate.year, med.endDate.month, med.endDate.day);
+      if (todayDateOnly.isBefore(startOnly) || todayDateOnly.isAfter(endOnly)) continue;
+
+      for (final time in med.selectedTimes) {
+        totalMedsToday++;
+        final status = med.adherenceLogs[todayStr]?[time] ?? 'Pending';
+        if (status == 'Taken') {
+          takenMedsToday++;
+        }
+      }
+    }
+    final medsText = totalMedsToday > 0 ? '$takenMedsToday/$totalMedsToday' : '0/${medProvider.medicines.length}';
+
+    final weightText = userProvider.weight > 0 ? '${userProvider.weight.toStringAsFixed(1)} kg' : '0.0 kg';
+    final moodEmoji = moodProvider.latestMood.split(' ').first;
+    final notesText = '${journalProvider.journals.length}';
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const SectionHeader(title: "This Week's Summary", icon: Icons.analytics_outlined),
       const SizedBox(height: MaatriTheme.spacingSm),
       GlassCard(
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-          _buildSummaryItem('Meds', '2/3', MaatriColors.coral, Icons.medication_rounded),
-          _buildSummaryItem('Weight', '68 kg', MaatriColors.teal, Icons.monitor_weight_rounded),
-          _buildSummaryItem('Mood', '😊', MaatriColors.goldenAmber, null),
-          _buildSummaryItem('Notes', '3', MaatriColors.lavenderDark, Icons.note_alt_rounded),
+          _buildSummaryItem('Meds', medsText, MaatriColors.coral, Icons.medication_rounded),
+          _buildSummaryItem('Weight', weightText, MaatriColors.teal, Icons.monitor_weight_rounded),
+          _buildSummaryItem('Mood', moodEmoji, MaatriColors.goldenAmber, null),
+          _buildSummaryItem('Notes', notesText, MaatriColors.lavenderDark, Icons.note_alt_rounded),
         ]),
       ),
     ]);

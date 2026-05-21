@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:provider/provider.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/auth/presentation/pages/auth_page.dart';
@@ -12,6 +15,9 @@ import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/emergency/presentation/pages/emergency_page.dart';
 import '../../features/timeline/presentation/pages/timeline_page.dart';
 import '../navigation/app_shell.dart';
+import '../../../providers/auth_provider.dart';
+
+import '../providers/user_provider.dart';
 
 // Tracker sub-modules (Level 2 deep-link targets)
 import '../../features/tracker/health_tracking/presentation/pages/health_tracking_page.dart';
@@ -44,9 +50,72 @@ class AppRoutes {
   static const insightsHistory = '/tracker/insights';
 }
 
-/// GoRouter configuration
-final GoRouter appRouter = GoRouter(
-  initialLocation: AppRoutes.splash,
+/// Helper class to make GoRouter react to Firebase Auth Stream changes
+class GoRouterRefreshStream extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _subscription;
+
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((dynamic _) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+/// Create GoRouter configuration dynamically
+GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
+  return GoRouter(
+    initialLocation: AppRoutes.splash,
+    refreshListenable: Listenable.merge([authProvider, userProvider]),
+    redirect: (context, state) {
+      final user = authProvider.user;
+      final isLoggedIn = user != null;
+      final location = state.matchedLocation;
+
+      // Allowed public paths
+      final isSplash = location == AppRoutes.splash;
+      final isOnboarding = location == AppRoutes.onboarding;
+      final isAuth = location == AppRoutes.auth;
+
+      // Wait if the providers are fetching initial data
+      if (authProvider.isLoading || userProvider.isLoading) {
+        if (isSplash) return null;
+        return null;
+      }
+
+      // If not logged in, redirect any protected route access to /auth
+      if (!isLoggedIn) {
+        if (!isSplash && !isOnboarding && !isAuth) {
+          debugPrint('GoRouter Redirect: Unauthenticated access to $location. Redirecting to /auth');
+          return AppRoutes.auth;
+        }
+        return null;
+      }
+
+      // User is logged in
+      // If user is on public landing pages or auth pages
+      if (isSplash || isOnboarding || isAuth) {
+        if (userProvider.isOnboardingCompleted) {
+          debugPrint('GoRouter Redirect: Onboarding complete. Routing to /home');
+          return AppRoutes.home;
+        } else {
+          debugPrint('GoRouter Redirect: Onboarding incomplete. Routing to /pregnancy-setup');
+          return AppRoutes.pregnancySetup;
+        }
+      }
+
+      // Protect onboarding setup route if already completed onboarding
+      if (location == AppRoutes.pregnancySetup && userProvider.isOnboardingCompleted) {
+        debugPrint('GoRouter Redirect: Onboarding already complete. Routing to /home');
+        return AppRoutes.home;
+      }
+
+      return null;
+    },
   routes: [
     GoRoute(
       path: AppRoutes.splash,
@@ -139,3 +208,5 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
+}
+

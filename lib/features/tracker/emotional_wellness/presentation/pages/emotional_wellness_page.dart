@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
 
-// Models & Storage
+// Models
 import 'package:maatricare/core/models/journal_entry.dart';
-import 'package:maatricare/core/services/journal_storage_service.dart';
+import 'package:maatricare/core/providers/journal_provider.dart';
+import 'package:maatricare/core/providers/mood_provider.dart';
 
 class EmotionalWellnessPage extends StatefulWidget {
   const EmotionalWellnessPage({super.key});
@@ -17,9 +19,6 @@ class EmotionalWellnessPage extends StatefulWidget {
 }
 
 class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
-  final JournalStorageService _journalService = JournalStorageService();
-  List<JournalEntry> _journals = [];
-  bool _isLoading = true;
   bool _filterBookmarkedOnly = false;
 
   // Reflection states (persisted in memory for simple session tracking)
@@ -38,34 +37,33 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
   @override
   void initState() {
     super.initState();
-    _loadJournals();
-  }
-
-  Future<void> _loadJournals() async {
-    setState(() => _isLoading = true);
-    final list = await _journalService.loadJournalEntries();
-    setState(() {
-      _journals = list;
-      _isLoading = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<JournalProvider>(context, listen: false).loadJournals();
+      Provider.of<MoodProvider>(context, listen: false).loadMoods();
     });
   }
 
   /// Check if today's entry already exists
-  JournalEntry? _getTodayEntry() {
+  JournalEntry? _getTodayEntry(List<JournalEntry> journals) {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-    final matches = _journals.where((j) => j.date == todayStr);
+    final matches = journals.where((j) => j.date == todayStr);
     return matches.isNotEmpty ? matches.first : null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final journalProvider = Provider.of<JournalProvider>(context);
+    final moodProvider = Provider.of<MoodProvider>(context);
+    final journals = journalProvider.journals;
+    final isLoading = journalProvider.isLoading || moodProvider.isLoading;
+
     // Filter journals if toggled
     final filteredJournals = _filterBookmarkedOnly
-        ? _journals.where((j) => j.isBookmarked).toList()
-        : _journals;
+        ? journals.where((j) => j.isBookmarked).toList()
+        : journals;
 
-    final todayEntry = _getTodayEntry();
+    final todayEntry = _getTodayEntry(journals);
 
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
@@ -76,7 +74,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _isLoading
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(MaatriTheme.spacingMd),
@@ -175,6 +173,10 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
   }
 
   Widget _buildMoodPickerCard(JournalEntry? todayEntry) {
+    final journalProvider = Provider.of<JournalProvider>(context, listen: false);
+    final moodProvider = Provider.of<MoodProvider>(context, listen: false);
+    final journalsList = Provider.of<JournalProvider>(context).journals;
+
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -199,9 +201,11 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
               return GestureDetector(
                 onTap: () async {
                   final moodString = '${mood.$2} ${mood.$1}';
+                  await moodProvider.saveMood(moodString);
+
                   if (todayEntry != null) {
                     final updated = todayEntry.copyWith(mood: moodString);
-                    await _journalService.saveJournalEntry(updated);
+                    await journalProvider.saveJournal(updated);
                   } else {
                     final now = DateTime.now();
                     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
@@ -211,15 +215,17 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                       content: '',
                       mood: moodString,
                     );
-                    await _journalService.saveJournalEntry(newEntry);
+                    await journalProvider.saveJournal(newEntry);
                   }
-                  _loadJournals();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Today\'s mood set to ${mood.$1}! 😊'),
-                      backgroundColor: MaatriColors.success,
-                    ),
-                  );
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Today\'s mood set to ${mood.$1}! 😊'),
+                        backgroundColor: MaatriColors.success,
+                      ),
+                    );
+                  }
                 },
                 child: Column(
                   children: [
@@ -248,13 +254,13 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
               );
             }).toList(),
           ),
-          if (_journals.isNotEmpty) ...[
+          if (journalsList.isNotEmpty) ...[
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 6),
             Text('Recent Reflections Timeline:', style: MaatriTypography.labelMedium),
             const SizedBox(height: 6),
-            ..._journals.take(2).map((log) => Padding(
+            ...journalsList.take(2).map((log) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(
                 children: [
@@ -344,8 +350,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                 const Spacer(),
                 GestureDetector(
                   onTap: () async {
-                    await _journalService.toggleBookmark(entry.id);
-                    _loadJournals();
+                    await Provider.of<JournalProvider>(context, listen: false).toggleBookmark(entry.id);
                   },
                   child: Icon(
                     entry.isBookmarked ? Icons.star_rounded : Icons.star_outline_rounded,
@@ -515,9 +520,11 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                         isBookmarked: isBookmarked,
                       );
 
-                      await _journalService.saveJournalEntry(entry);
-                      Navigator.pop(ctx);
-                      _loadJournals();
+                      await Provider.of<JournalProvider>(context, listen: false).saveJournal(entry);
+                      await Provider.of<MoodProvider>(context, listen: false).loadMoods();
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                      }
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -549,11 +556,13 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _journalService.deleteJournalEntry(id);
-              _loadJournals();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Journal entry deleted.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating),
-              );
+              await Provider.of<JournalProvider>(context, listen: false).deleteJournal(id);
+              await Provider.of<MoodProvider>(context, listen: false).loadMoods();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Journal entry deleted.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.danger),
             child: const Text('Delete'),

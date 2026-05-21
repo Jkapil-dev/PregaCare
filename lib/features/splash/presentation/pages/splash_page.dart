@@ -4,6 +4,9 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/navigation/app_router.dart';
+import 'package:provider/provider.dart';
+import '../../../../providers/auth_provider.dart';
+import '../../../../core/providers/user_provider.dart';
 
 /// Personalized async splash screen
 class SplashPage extends StatefulWidget {
@@ -24,7 +27,6 @@ class _SplashPageState extends State<SplashPage>
   late Animation<Offset> _textSlide;
 
   String _loadingMessage = '';
-  final _userName = 'Sarah'; // TODO: Load from storage
 
   final _loadingMessages = [
     'Preparing your pregnancy dashboard…',
@@ -90,9 +92,25 @@ class _SplashPageState extends State<SplashPage>
       _textController.forward(from: 0);
       await Future.delayed(const Duration(milliseconds: 900));
     }
+    
+    if (!mounted) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    // Wait for provider loading to complete
+    while (authProvider.isLoading || userProvider.isLoading) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
     await Future.delayed(const Duration(milliseconds: 400));
     if (mounted) {
-      context.go(AppRoutes.onboarding);
+      if (!authProvider.isAuthenticated) {
+        context.go(AppRoutes.onboarding);
+      } else if (userProvider.isOnboardingCompleted) {
+        context.go(AppRoutes.home);
+      } else {
+        context.go(AppRoutes.pregnancySetup);
+      }
     }
   }
 
@@ -192,12 +210,19 @@ class _SplashPageState extends State<SplashPage>
                     // Personalized greeting
                     FadeTransition(
                       opacity: _glow,
-                      child: Text(
-                        '$_greeting, $_userName',
-                        style: MaatriTypography.headlineMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: Consumer<UserProvider>(
+                        builder: (context, userProvider, child) {
+                          final userName = userProvider.displayName.isNotEmpty 
+                              ? userProvider.displayName 
+                              : 'Sarah';
+                          return Text(
+                            '$_greeting, $userName',
+                            style: MaatriTypography.headlineMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 12),

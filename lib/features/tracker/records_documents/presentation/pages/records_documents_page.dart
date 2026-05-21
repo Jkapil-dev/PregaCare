@@ -4,12 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
 import 'package:maatricare/core/models/medical_record.dart';
-import 'package:maatricare/core/services/medical_record_storage_service.dart';
+import 'package:maatricare/core/providers/record_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'document_preview_page.dart';
 
@@ -20,47 +21,43 @@ class RecordsDocumentsPage extends StatefulWidget {
 }
 
 class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
-  final MedicalRecordStorageService _storageService = MedicalRecordStorageService();
   final ImagePicker _imagePicker = ImagePicker();
-  List<MedicalRecord> _records = [];
-  bool _isLoading = true;
   String _selectedCategory = 'All';
 
   @override
   void initState() {
     super.initState();
-    _loadRecords();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RecordProvider>().loadRecords();
+    });
   }
 
-  Future<void> _loadRecords() async {
-    setState(() => _isLoading = true);
-    final list = await _storageService.loadRecords();
-    setState(() { _records = list; _isLoading = false; });
+  List<MedicalRecord> _getFilteredRecords(List<MedicalRecord> records) {
+    if (_selectedCategory == 'All') return records;
+    return records.where((r) => r.category == _selectedCategory).toList();
   }
 
-  List<MedicalRecord> get _filteredRecords {
-    if (_selectedCategory == 'All') return _records;
-    return _records.where((r) => r.category == _selectedCategory).toList();
-  }
-
-  Map<String, int> get _categoryCounts {
-    final counts = <String, int>{'All': _records.length};
+  Map<String, int> _getCategoryCounts(List<MedicalRecord> records) {
+    final counts = <String, int>{'All': records.length};
     for (final cat in MedicalRecord.allCategories) {
-      counts[cat] = _records.where((r) => r.category == cat).length;
+      counts[cat] = records.where((r) => r.category == cat).length;
     }
     return counts;
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredRecords;
+    final recordProvider = context.watch<RecordProvider>();
+    final records = recordProvider.records;
+    final isLoading = recordProvider.isLoading;
+    final filtered = _getFilteredRecords(records);
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       appBar: AppBar(
         title: const Text('Records & Documents'),
         leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
       ),
-      body: _isLoading
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(MaatriTheme.spacingMd),
@@ -71,11 +68,11 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
                 const SizedBox(height: MaatriTheme.spacingLg),
 
                 // Summary bar
-                _buildSummaryBar(),
+                _buildSummaryBar(records),
                 const SizedBox(height: MaatriTheme.spacingMd),
 
                 // Category filter chips
-                _buildCategoryFilter(),
+                _buildCategoryFilter(records),
                 const SizedBox(height: MaatriTheme.spacingMd),
 
                 // Upload button
@@ -108,7 +105,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
     );
   }
 
-  Widget _buildSummaryBar() {
+  Widget _buildSummaryBar(List<MedicalRecord> records) {
     return Container(
       width: double.infinity, padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(gradient: MaatriColors.tealGradient, borderRadius: BorderRadius.circular(16), boxShadow: MaatriTheme.shadowMd),
@@ -117,19 +114,19 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Total Records', style: MaatriTypography.titleMedium.copyWith(color: Colors.white)),
-          Text('${_records.length} files stored securely', style: MaatriTypography.bodySmall.copyWith(color: Colors.white70)),
+          Text('${records.length} files stored securely', style: MaatriTypography.bodySmall.copyWith(color: Colors.white70)),
         ])),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
-          child: Text('${_records.length}', style: MaatriTypography.displaySmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: Text('${records.length}', style: MaatriTypography.displaySmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ]),
     );
   }
 
-  Widget _buildCategoryFilter() {
-    final counts = _categoryCounts;
+  Widget _buildCategoryFilter(List<MedicalRecord> records) {
+    final counts = _getCategoryCounts(records);
     final categories = ['All', ...MedicalRecord.allCategories];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -548,7 +545,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
                           }
                         } else {
                           if (filePath != null) {
-                            recordFilePath = await _storageService.saveFileLocally(filePath, fileName);
+                            recordFilePath = await context.read<RecordProvider>().saveFileLocally(filePath, fileName);
                           }
                         }
 
@@ -561,10 +558,9 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
                           filePath: recordFilePath,
                           notes: notesCtrl.text.trim(),
                         );
-                        await _storageService.saveRecord(record);
+                        await context.read<RecordProvider>().saveRecord(record);
                         if (mounted) {
                           Navigator.pop(ctx);
-                          _loadRecords();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Medical record saved! ✓'), backgroundColor: MaatriColors.success),
                           );
@@ -607,8 +603,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _storageService.deleteRecord(id);
-              _loadRecords();
+              await context.read<RecordProvider>().deleteRecord(id);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Record deleted.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating),

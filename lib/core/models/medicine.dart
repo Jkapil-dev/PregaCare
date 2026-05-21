@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Production-grade medicine data model for MaatriCare.
 /// Supports multi-time selection, meal relations, reminder status, duration, and adherence history logs.
@@ -136,6 +137,24 @@ class Medicine {
         'createdAt': createdAt.toIso8601String(),
       };
 
+  /// Helper to robustly parse DateTime from String, DateTime, Timestamp or custom Map representation
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.parse(value);
+    
+    if (value is Map) {
+      if (value.containsKey('_seconds')) {
+        return DateTime.fromMillisecondsSinceEpoch((value['_seconds'] as int) * 1000);
+      }
+      if (value.containsKey('seconds')) {
+        return DateTime.fromMillisecondsSinceEpoch((value['seconds'] as int) * 1000);
+      }
+    }
+    return DateTime.now();
+  }
+
   /// Deserialize from JSON map (backward compatible)
   factory Medicine.fromJson(Map<String, dynamic> json) {
     List<String> times;
@@ -148,11 +167,11 @@ class Medicine {
     }
 
     final startDate = json.containsKey('startDate')
-        ? DateTime.parse(json['startDate'])
+        ? _parseDateTime(json['startDate'])
         : DateTime.now();
     final durationDays = json['durationDays'] as int? ?? 7;
     final endDate = json.containsKey('endDate')
-        ? DateTime.parse(json['endDate'])
+        ? _parseDateTime(json['endDate'])
         : startDate.add(Duration(days: durationDays > 0 ? durationDays - 1 : 0));
 
     // Handle Adherence Logs safely
@@ -182,7 +201,7 @@ class Medicine {
           : [],
       adherenceLogs: logs,
       createdAt: json.containsKey('createdAt')
-          ? DateTime.parse(json['createdAt'])
+          ? _parseDateTime(json['createdAt'])
           : DateTime.now(),
     );
   }
