@@ -242,17 +242,17 @@ class DashboardPage extends StatelessWidget {
         const SizedBox(width: MaatriTheme.spacingSm),
         Expanded(
           child: QuickActionTile(
-            icon: Icons.water_drop_rounded,
-            label: 'Water',
-            color: MaatriColors.info,
-            onTap: () {},
+            icon: Icons.monitor_weight_rounded,
+            label: 'Weight',
+            color: MaatriColors.teal,
+            onTap: () => context.go(AppRoutes.tracking),
           ),
         ),
         const SizedBox(width: MaatriTheme.spacingSm),
         Expanded(
           child: QuickActionTile(
             icon: Icons.edit_note_rounded,
-            label: 'Log',
+            label: 'Notes',
             color: MaatriColors.goldenAmber,
             onTap: () => context.go(AppRoutes.tracking),
           ),
@@ -262,8 +262,8 @@ class DashboardPage extends StatelessWidget {
           child: QuickActionTile(
             icon: Icons.document_scanner_rounded,
             label: 'Scan',
-            color: MaatriColors.teal,
-            onTap: () {},
+            color: MaatriColors.lavenderDark,
+            onTap: () => context.go(AppRoutes.tracking),
           ),
         ),
       ],
@@ -374,10 +374,10 @@ class DashboardPage extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSummaryItem('BP', '120/80', MaatriColors.success, Icons.favorite_rounded),
+              _buildSummaryItem('Meds', '2/3', MaatriColors.coral, Icons.medication_rounded),
               _buildSummaryItem('Weight', '68 kg', MaatriColors.teal, Icons.monitor_weight_rounded),
               _buildSummaryItem('Mood', '😊', MaatriColors.goldenAmber, null),
-              _buildSummaryItem('Sleep', '7.5h', MaatriColors.lavenderDark, Icons.bedtime_rounded),
+              _buildSummaryItem('Notes', '3', MaatriColors.lavenderDark, Icons.note_alt_rounded),
             ],
           ),
         ),

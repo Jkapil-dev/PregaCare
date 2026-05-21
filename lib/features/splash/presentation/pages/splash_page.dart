@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
+import '../../../../core/theme/theme.dart';
 import '../../../../core/navigation/app_router.dart';
 
-/// Splash screen with animated logo and gradient background
+/// Personalized async splash screen
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -13,63 +14,107 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+    with TickerProviderStateMixin {
+  late AnimationController _mainController;
+  late AnimationController _textController;
   late Animation<double> _fadeIn;
   late Animation<double> _scale;
   late Animation<double> _glow;
+  late Animation<double> _textFade;
+  late Animation<Offset> _textSlide;
+
+  String _loadingMessage = '';
+  final _userName = 'Sarah'; // TODO: Load from storage
+
+  final _loadingMessages = [
+    'Preparing your pregnancy dashboard…',
+    'Loading your health insights…',
+    'Almost ready…',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    _mainController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
 
+    _textController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
     _fadeIn = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0, 0.5, curve: Curves.easeOut),
+        parent: _mainController,
+        curve: const Interval(0, 0.4, curve: Curves.easeOut),
       ),
     );
 
     _scale = Tween<double>(begin: 0.8, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0, 0.6, curve: Curves.elasticOut),
+        parent: _mainController,
+        curve: const Interval(0, 0.5, curve: Curves.elasticOut),
       ),
     );
 
     _glow = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.4, 1, curve: Curves.easeInOut),
+        parent: _mainController,
+        curve: const Interval(0.3, 0.8, curve: Curves.easeInOut),
       ),
     );
 
-    _controller.forward();
+    _textFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
+    );
 
-    // Navigate after splash
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        // TODO: Check auth state to determine route
-        context.go(AppRoutes.onboarding);
-      }
-    });
+    _textSlide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
+
+    _mainController.forward();
+
+    // Cycle loading messages
+    _startLoadingSequence();
+  }
+
+  void _startLoadingSequence() async {
+    await Future.delayed(const Duration(milliseconds: 800));
+    for (int i = 0; i < _loadingMessages.length; i++) {
+      if (!mounted) return;
+      setState(() => _loadingMessage = _loadingMessages[i]);
+      _textController.forward(from: 0);
+      await Future.delayed(const Duration(milliseconds: 900));
+    }
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (mounted) {
+      context.go(AppRoutes.onboarding);
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _mainController.dispose();
+    _textController.dispose();
     super.dispose();
+  }
+
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: AnimatedBuilder(
-        animation: _controller,
+        animation: Listenable.merge([_mainController, _textController]),
         builder: (context, child) {
           return Container(
             width: double.infinity,
@@ -81,20 +126,22 @@ class _SplashPageState extends State<SplashPage>
               alignment: Alignment.center,
               children: [
                 // Floating particles
-                ...List.generate(20, (i) => _buildParticle(i)),
+                ...List.generate(15, (i) => _buildParticle(i)),
 
-                // Logo and text
+                // Main content
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Glowing logo container
+                    const Spacer(flex: 3),
+
+                    // Glowing logo
                     Transform.scale(
                       scale: _scale.value,
                       child: FadeTransition(
                         opacity: _fadeIn,
                         child: Container(
-                          width: 140,
-                          height: 140,
+                          width: 120,
+                          height: 120,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.white.withValues(
@@ -102,27 +149,28 @@ class _SplashPageState extends State<SplashPage>
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.white
-                                    .withValues(alpha: _glow.value * 0.3),
+                                    .withValues(alpha: _glow.value * 0.25),
                                 blurRadius: 40 + (_glow.value * 20),
-                                spreadRadius: _glow.value * 10,
+                                spreadRadius: _glow.value * 8,
                               ),
                             ],
                           ),
                           child: const Icon(
                             Icons.pregnant_woman_rounded,
-                            size: 70,
+                            size: 60,
                             color: Colors.white,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+
                     // App name
                     FadeTransition(
                       opacity: _fadeIn,
                       child: RichText(
                         text: TextSpan(
-                          style: MaatriTypography.displayMedium.copyWith(
+                          style: MaatriTypography.displaySmall.copyWith(
                             color: Colors.white,
                           ),
                           children: const [
@@ -138,34 +186,54 @@ class _SplashPageState extends State<SplashPage>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+
+                    const Spacer(flex: 1),
+
+                    // Personalized greeting
                     FadeTransition(
-                      opacity: _fadeIn,
+                      opacity: _glow,
                       child: Text(
-                        'Your maternal healthcare companion',
-                        style: MaatriTypography.bodyMedium.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
+                        '$_greeting, $_userName',
+                        style: MaatriTypography.headlineMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                    const SizedBox(height: 12),
 
-                // Loading indicator at bottom
-                Positioned(
-                  bottom: 80,
-                  child: FadeTransition(
-                    opacity: _glow,
-                    child: SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        strokeCap: StrokeCap.round,
-                        color: Colors.white.withValues(alpha: 0.7),
+                    // Loading message with slide animation
+                    SlideTransition(
+                      position: _textSlide,
+                      child: FadeTransition(
+                        opacity: _textFade,
+                        child: Text(
+                          _loadingMessage,
+                          style: MaatriTypography.bodyMedium.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+
+                    const SizedBox(height: 32),
+
+                    // Loading indicator
+                    FadeTransition(
+                      opacity: _glow,
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          strokeCap: StrokeCap.round,
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+
+                    const Spacer(flex: 2),
+                  ],
                 ),
               ],
             ),
@@ -177,8 +245,10 @@ class _SplashPageState extends State<SplashPage>
 
   Widget _buildParticle(int index) {
     final size = 2.0 + (index % 4) * 1.5;
-    final top = (index * 47.0) % MediaQuery.of(context).size.height;
-    final left = (index * 73.0) % MediaQuery.of(context).size.width;
+    final screenH = MediaQuery.of(context).size.height;
+    final screenW = MediaQuery.of(context).size.width;
+    final top = (index * 47.0) % screenH;
+    final left = (index * 73.0) % screenW;
 
     return Positioned(
       top: top,
@@ -189,7 +259,7 @@ class _SplashPageState extends State<SplashPage>
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.3 + (index % 3) * 0.15),
+            color: Colors.white.withValues(alpha: 0.25 + (index % 3) * 0.12),
             shape: BoxShape.circle,
           ),
         ),
