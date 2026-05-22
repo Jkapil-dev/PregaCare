@@ -65,7 +65,7 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
       builder: (context) => AlertDialog(
         title: const Text('Delete Account?'),
         content: const Text(
-          'WARNING: This will permanently delete your MaatriCare account, your pregnancy tracker data, and all sync entries. This action cannot be undone.',
+          'WARNING: This will permanently delete your Materna account, your pregnancy tracker data, and all sync entries. This action cannot be undone.',
           style: TextStyle(color: Colors.redAccent),
         ),
         actions: [

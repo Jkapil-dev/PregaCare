@@ -15,7 +15,7 @@ import '../../../../core/providers/connection_provider.dart';
 import '../../../../providers/auth_provider.dart';
 
 
-/// Home Dashboard - the main hub of MaatriCare
+/// Home Dashboard - the main hub of Materna
 import 'package:provider/provider.dart';
 import '../../../../core/models/consultation.dart';
 import '../../../../core/providers/user_provider.dart';
@@ -27,7 +27,7 @@ import '../../../../core/providers/shared_pregnancy_provider.dart';
 import '../../../../core/providers/notification_provider.dart';
 
 
-/// Home Dashboard - the main hub of MaatriCare
+/// Home Dashboard - the main hub of Materna
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
@@ -419,7 +419,7 @@ class DashboardPage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Connect your partner account with your partner\'s MaatriCare profile to begin syncing pregnancy progress, shared medication schedules, and real-time SOS safety alerts.',
+              'Connect your partner account with your partner\'s Materna profile to begin syncing pregnancy progress, shared medication schedules, and real-time SOS safety alerts.',
               style: MaatriTypography.bodyMedium.copyWith(
                 color: Colors.white.withValues(alpha: 0.9),
                 height: 1.4,
@@ -1356,7 +1356,7 @@ class _UnlinkedPartnerViewState extends State<_UnlinkedPartnerView> {
                   const SizedBox(height: 24),
                   Center(
                     child: Text(
-                      'Welcome to MaatriCare',
+                      'Welcome to Materna',
                       style: MaatriTypography.headlineLarge.copyWith(
                         color: MaatriColors.charcoal,
                         fontWeight: FontWeight.bold,
@@ -1378,7 +1378,7 @@ class _UnlinkedPartnerViewState extends State<_UnlinkedPartnerView> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
                       child: Text(
-                        'Connect your partner account with the mother\'s MaatriCare profile to start syncing and supporting her pregnancy journey in real time.',
+                        'Connect your partner account with the mother\'s Materna profile to start syncing and supporting her pregnancy journey in real time.',
                         textAlign: TextAlign.center,
                         style: MaatriTypography.bodyMedium.copyWith(
                           color: MaatriColors.slate,
@@ -1449,7 +1449,7 @@ class _UnlinkedPartnerViewState extends State<_UnlinkedPartnerView> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Enter the secure connection code (e.g. MAT-XXXXXX) generated on the mother\'s MaatriCare device.',
+                            'Enter the secure connection code (e.g. MAT-XXXXXX) generated on the mother\'s Materna device.',
                             style: MaatriTypography.bodySmall.copyWith(
                               color: MaatriColors.slate,
                               height: 1.4,

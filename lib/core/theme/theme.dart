@@ -84,6 +84,8 @@ class MaatriTheme {
         error: MaatriColors.danger,
         onError: Colors.white,
       ),
+      canvasColor: MaatriColors.pureWhite,
+      dialogBackgroundColor: MaatriColors.pureWhite,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -114,6 +116,9 @@ class MaatriTheme {
         labelLarge: MaatriTypography.labelLarge,
         labelMedium: MaatriTypography.labelMedium,
         labelSmall: MaatriTypography.labelSmall,
+      ).apply(
+        bodyColor: MaatriColors.charcoal,
+        displayColor: MaatriColors.charcoal,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -202,11 +207,38 @@ class MaatriTheme {
       chipTheme: ChipThemeData(
         backgroundColor: MaatriColors.cloudGray,
         selectedColor: MaatriColors.coralLight,
-        labelStyle: MaatriTypography.chipText,
+        labelStyle: MaatriTypography.chipText.copyWith(color: MaatriColors.charcoal),
+        secondaryLabelStyle: MaatriTypography.chipText.copyWith(color: MaatriColors.charcoal),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusFull),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      dropdownMenuTheme: DropdownMenuThemeData(
+        textStyle: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.charcoal),
+        menuStyle: MenuStyle(
+          backgroundColor: WidgetStateProperty.all(MaatriColors.pureWhite),
+          surfaceTintColor: WidgetStateProperty.all(Colors.transparent),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: MaatriColors.pureWhite,
+        textStyle: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.charcoal),
+        surfaceTintColor: Colors.transparent,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: MaatriColors.pureWhite,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: MaatriColors.pureWhite,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: MaatriTypography.titleLarge.copyWith(color: MaatriColors.charcoal),
+        contentTextStyle: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.charcoal),
+      ),
+      listTileTheme: ListTileThemeData(
+        textColor: MaatriColors.charcoal,
+        iconColor: MaatriColors.coral,
       ),
     );
   }

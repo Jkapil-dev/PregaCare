@@ -493,7 +493,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
                   side: const BorderSide(color: MaatriColors.mediumGray),
                 ),
                 onPressed: () {
-                  Share.share('Join my pregnancy journey on MaatriCare! Use my secure connection code: $code');
+                  Share.share('Join my pregnancy journey on Materna! Use my secure connection code: $code');
                 },
               ),
             ],

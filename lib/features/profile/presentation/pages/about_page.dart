@@ -13,7 +13,7 @@ class AboutPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       appBar: AppBar(
-        title: const Text('About MaatriCare'),
+        title: const Text('About Materna'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: MaatriColors.charcoal,
@@ -46,7 +46,7 @@ class AboutPage extends StatelessWidget {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  'MaatriCare',
+                  'Materna',
                   style: MaatriTypography.headlineMedium.copyWith(
                     color: MaatriColors.charcoal,
                     fontWeight: FontWeight.bold,
@@ -79,7 +79,7 @@ class AboutPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'MaatriCare is built with love and care to assist expectant mothers throughout their pregnancy journey. Our goal is to provide healthcare-grade tracking, vital monitoring, clinical scheduling, AI-assisted guidance, and emotional support to ensure a healthy and happy experience for mother and baby.',
+                        'Materna is built with love and care to assist expectant mothers throughout their pregnancy journey. Our goal is to provide healthcare-grade tracking, vital monitoring, clinical scheduling, AI-assisted guidance, and emotional support to ensure a healthy and happy experience for mother and baby.',
                         style: MaatriTypography.bodyMedium.copyWith(
                           color: MaatriColors.slate,
                           height: 1.4,
@@ -127,7 +127,7 @@ class AboutPage extends StatelessWidget {
                       onTap: () {
                         showLicensePage(
                           context: context,
-                          applicationName: 'MaatriCare',
+                          applicationName: 'Materna',
                           applicationVersion: '1.0.0',
                           applicationIcon: Padding(
                             padding: const EdgeInsets.all(12.0),
@@ -143,7 +143,7 @@ class AboutPage extends StatelessWidget {
               
               Center(
                 child: Text(
-                  '© 2026 MaatriCare Inc. All rights reserved.',
+                  '© 2026 Materna Inc. All rights reserved.',
                   style: MaatriTypography.labelSmall.copyWith(
                     color: MaatriColors.mediumGray,
                   ),

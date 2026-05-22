@@ -185,7 +185,7 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 8),
               _MenuItem(
                 icon: Icons.info_outline_rounded,
-                title: 'About MaatriCare',
+                title: 'About Materna',
                 subtitle: 'Version details, terms, licenses',
                 color: MaatriColors.coral,
                 route: AppRoutes.about,
@@ -224,7 +224,7 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text('MaatriCare v1.0.0', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.mediumGray)),
+              Text('Materna v1.0.0', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.mediumGray)),
               const SizedBox(height: 24),
             ],
           ),

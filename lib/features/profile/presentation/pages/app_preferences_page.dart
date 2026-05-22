@@ -86,7 +86,7 @@ class _AppPreferencesPageState extends State<AppPreferencesPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Customize MaatriCare display language, units, and appearance theme.',
+                    'Customize Materna display language, units, and appearance theme.',
                     style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate),
                   ),
                   const SizedBox(height: 16),

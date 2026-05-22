@@ -172,10 +172,13 @@ class _SplashPageState extends State<SplashPage>
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.pregnant_woman_rounded,
-                            size: 60,
-                            color: Colors.white,
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/logo.png',
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),
@@ -190,16 +193,12 @@ class _SplashPageState extends State<SplashPage>
                           style: MaatriTypography.displaySmall.copyWith(
                             color: Colors.white,
                           ),
-                          children: const [
-                            TextSpan(
-                              text: 'Maatri',
-                              style: TextStyle(fontWeight: FontWeight.w300),
-                            ),
-                            TextSpan(
-                              text: 'Care',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                          ],
+                            children: const [
+                              TextSpan(
+                                text: 'Materna',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ],
                         ),
                       ),
                     ),

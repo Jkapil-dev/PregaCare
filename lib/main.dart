@@ -134,7 +134,7 @@ class _MaatriCareAppState extends State<MaatriCareApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'MaatriCare',
+      title: 'Materna',
       debugShowCheckedModeBanner: false,
       theme: MaatriTheme.lightTheme,
       routerConfig: _router,

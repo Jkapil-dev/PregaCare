@@ -97,7 +97,7 @@ class LocationProvider extends ChangeNotifier {
     try {
       await Share.share(
         message, 
-        subject: 'MaatriCare Emergency Location Alert',
+        subject: 'Materna Emergency Location Alert',
       );
     } catch (e) {
       debugPrint('LocationProvider native share error: $e');
@@ -153,7 +153,7 @@ class LocationProvider extends ChangeNotifier {
             ],
           ),
           content: const Text(
-            'GPS permissions are permanently denied for MaatriCare. Please enable location services inside the device system settings to use this feature.',
+            'GPS permissions are permanently denied for Materna. Please enable location services inside the device system settings to use this feature.',
           ),
           actions: [
             TextButton(
