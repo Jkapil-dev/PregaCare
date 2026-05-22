@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // Helper to get user document
+    function getUser(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    // Helper to check granular permissions for partner on mother's data
+    function hasPartnerPermission(motherUid, permissionKey) {
+      return signedIn() && 
+             exists(/databases/$(database)/documents/users/$(motherUid)) &&
+             getUser(motherUid).linkedPartnerUid == request.auth.uid &&
+             getUser(motherUid).linkedConnectionId != null &&
+             exists(/databases/$(database)/documents/pregnancy_connections/$(getUser(motherUid).linkedConnectionId)) &&
+             get(/databases/$(database)/documents/pregnancy_connections/$(getUser(motherUid).linkedConnectionId)).data.permissions[permissionKey] == true;
+    }
+
+    // Rules for users collection
+    match /users/{userId} {
+      allow read: if signedIn() && (
+        request.auth.uid == userId ||
+        resource.data.linkedPartnerUid == request.auth.uid ||
+        resource.data.linkedMotherUid == request.auth.uid
+      );
+      
+      allow create: if signedIn() && request.auth.uid == userId;
+      
+      allow update: if signedIn() && (
+        request.auth.uid == userId ||
+        // Allow partner to write linkedPartnerUid when joining
+        (request.resource.data.linkedPartnerUid == request.auth.uid && (!('linkedPartnerUid' in resource.data) || resource.data.linkedPartnerUid == null || resource.data.linkedPartnerUid == "")) ||
+        // Allow partner to clear linkedPartnerUid/linkedConnectionId on mother's doc when disconnecting
+        (resource.data.linkedPartnerUid == request.auth.uid && !('linkedPartnerUid' in request.resource.data)) ||
+        // Allow mother to clear linkedMotherUid/linkedConnectionId/role on partner's doc when disconnecting
+        (resource.data.linkedMotherUid == request.auth.uid && !('linkedMotherUid' in request.resource.data))
+      );
+      
+      allow delete: if isSelf(userId);
+
+      // Subcollections of users (Tracking data, emergencies, reminders)
+      
+      // Health Vitals & Trackers (viewTracker permission)
+      match /medicines/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewTracker");
+        allow write: if isSelf(userId);
+      }
+      match /vaccinations/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewTracker");
+        allow write: if isSelf(userId);
+      }
+      match /records/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewTracker");
+        allow write: if isSelf(userId);
+      }
+      match /journals/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewTracker");
+        allow write: if isSelf(userId);
+      }
+      match /moods/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewTracker");
+        allow write: if isSelf(userId);
+      }
+
+      // Emergency Contacts & Medical Info (viewEmergency permission)
+      match /emergency_contacts/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewEmergency");
+        allow write: if isSelf(userId);
+      }
+      match /medical_emergency_info/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewEmergency");
+        allow write: if isSelf(userId);
+      }
+      match /saved_hospitals/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewEmergency");
+        allow write: if isSelf(userId);
+      }
+
+      // Reminders & Calendar (viewReminders permission)
+      match /appointments/{document} {
+        allow read: if isSelf(userId) || hasPartnerPermission(userId, "viewReminders");
+        allow write: if isSelf(userId);
+      }
+
+      // Shared Notification Settings
+      match /notification_settings/{document} {
+        allow read: if isSelf(userId) || (
+          signedIn() && 
+          exists(/databases/$(database)/documents/users/$(userId)) &&
+          getUser(userId).linkedPartnerUid == request.auth.uid
+        );
+        allow write: if isSelf(userId);
+      }
+    }
+
+    // Rules for pregnancy connections collection
+    match /pregnancy_connections/{connectionId} {
+      allow read: if signedIn();
+      
+      allow create: if signedIn() && request.resource.data.motherUid == request.auth.uid;
+      
+      allow update: if signedIn() && (
+        resource.data.motherUid == request.auth.uid ||
+        // Partner joining
+        (resource.data.status == 'pending' && 
+         request.resource.data.status == 'active' && 
+         request.resource.data.partnerUid == request.auth.uid) ||
+        // Partner disconnecting
+        (resource.data.partnerUid == request.auth.uid && 
+         request.resource.data.status == 'disconnected')
+      );
+      
+      allow delete: if signedIn() && resource.data.motherUid == request.auth.uid;
+    }
+  }
+}

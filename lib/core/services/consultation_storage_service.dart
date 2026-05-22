@@ -6,12 +6,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/consultation.dart';
 import 'notification_service.dart';
 
+import '../utils/effective_uid.dart';
+
 class ConsultationStorageService {
   final NotificationService _notificationService = NotificationService();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String? get _uid => _auth.currentUser?.uid;
+  String? get _uid => EffectiveUidProvider.getEffectiveUid();
   String get _keyConsultations => 'maatricare_consultations_v1_${_uid ?? "guest"}';
 
   /// Save single consultation record, schedule notification, and persist

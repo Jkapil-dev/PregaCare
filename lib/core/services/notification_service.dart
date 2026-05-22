@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/vaccination.dart';
 import '../models/consultation.dart';
 
@@ -291,6 +293,52 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('Error showing emergency SOS notification: $e');
+    }
+  }
+
+  /// Syncs FCM device token to Firestore under users/{userId}/notification_settings/settings
+  Future<void> syncDeviceToken(String userId) async {
+    try {
+      if (kIsWeb) {
+        debugPrint('Web environment: Skipping real FCM token sync.');
+        return;
+      }
+      
+      final FirebaseMessaging messaging = FirebaseMessaging.instance;
+      
+      // Request permission
+      final NotificationSettings settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        final String? token = await messaging.getToken();
+        if (token != null) {
+          final String platform = defaultTargetPlatform == TargetPlatform.iOS ? 'iOS' : 'Android';
+          
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .collection('notification_settings')
+              .doc('settings')
+              .set({
+            'fcmToken': token,
+            'platform': platform,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          
+          debugPrint('FCM Token synced successfully: $token');
+        } else {
+          debugPrint('FCM Token is null');
+        }
+      } else {
+        debugPrint('FCM permissions denied or not authorized: ${settings.authorizationStatus}');
+      }
+    } catch (e) {
+      debugPrint('Error syncing FCM token: $e');
     }
   }
 }

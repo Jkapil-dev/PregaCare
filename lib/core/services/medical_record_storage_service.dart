@@ -8,11 +8,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/medical_record.dart';
 
+import '../utils/effective_uid.dart';
+
 class MedicalRecordStorageService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String? get _uid => _auth.currentUser?.uid;
+  String? get _uid => EffectiveUidProvider.getEffectiveUid();
   String get _keyRecords => 'maatricare_medical_records_v1_${_uid ?? "guest"}';
 
   /// Copies the picked file into the app's documents directory for persistent local storage.

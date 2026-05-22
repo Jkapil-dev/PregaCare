@@ -12,10 +12,13 @@ import '../models/medical_emergency_info.dart';
 import '../models/hospital.dart';
 import '../services/notification_service.dart';
 import 'location_provider.dart';
+import '../utils/effective_uid.dart';
+import 'user_provider.dart';
 
 class EmergencyProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   StreamSubscription<User?>? _authSubscription;
+  UserProvider? _userProvider;
 
   List<EmergencyContact> _contacts = [];
   MedicalEmergencyInfo _medicalInfo = const MedicalEmergencyInfo();
@@ -54,9 +57,29 @@ class EmergencyProvider extends ChangeNotifier {
     });
   }
 
-  String? get _userId {
-    final user = FirebaseAuth.instance.currentUser;
-    return user?.uid;
+  void update(UserProvider userProvider) {
+    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+
+    final oldHasPermission = _userProvider?.hasEmergencyPermission ?? false;
+    final newHasPermission = userProvider.hasEmergencyPermission;
+
+    _userProvider = userProvider;
+
+    if (oldEffectiveUid != newEffectiveUid || oldHasPermission != newHasPermission) {
+      if (newHasPermission && newEffectiveUid != null && newEffectiveUid.isNotEmpty) {
+        loadAllEmergencyData();
+      } else {
+        _contacts = [];
+        _medicalInfo = const MedicalEmergencyInfo();
+        _savedHospitals = [];
+        notifyListeners();
+      }
+    }
+  }
+
+  String get _userId {
+    return EffectiveUidProvider.getEffectiveUid();
   }
 
   // ==========================================
@@ -127,8 +150,15 @@ class EmergencyProvider extends ChangeNotifier {
   // ==========================================
 
   Future<void> loadAllEmergencyData() async {
+    final hasPermission = _userProvider?.hasEmergencyPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) {
+      _contacts = [];
+      _medicalInfo = const MedicalEmergencyInfo();
+      _savedHospitals = [];
+      notifyListeners();
+      return;
+    }
 
     _isLoading = true;
     _errorMessage = null;
@@ -178,8 +208,12 @@ class EmergencyProvider extends ChangeNotifier {
   // ==========================================
 
   Future<void> saveContact(EmergencyContact contact) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify emergency contacts.');
+    }
+    final hasPermission = _userProvider?.hasEmergencyPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) return;
 
     try {
       final docRef = _db.collection('users').doc(uid).collection('emergency_contacts').doc(contact.id.isEmpty ? null : contact.id);
@@ -207,8 +241,12 @@ class EmergencyProvider extends ChangeNotifier {
   }
 
   Future<void> deleteContact(String contactId) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify emergency contacts.');
+    }
+    final hasPermission = _userProvider?.hasEmergencyPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) return;
 
     try {
       await _db.collection('users').doc(uid).collection('emergency_contacts').doc(contactId).delete();
@@ -228,8 +266,12 @@ class EmergencyProvider extends ChangeNotifier {
   // ==========================================
 
   Future<void> saveMedicalInfo(MedicalEmergencyInfo info) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify medical info.');
+    }
+    final hasPermission = _userProvider?.hasEmergencyPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) return;
 
     try {
       await _db.collection('users').doc(uid).collection('medical_emergency_info').doc('profile').set(info.toJson());
@@ -249,8 +291,12 @@ class EmergencyProvider extends ChangeNotifier {
   // ==========================================
 
   Future<void> saveHospital(Hospital hospital) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify saved hospitals.');
+    }
+    final hasPermission = _userProvider?.hasEmergencyPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) return;
 
     try {
       final docRef = _db.collection('users').doc(uid).collection('saved_hospitals').doc(hospital.id.isEmpty ? null : hospital.id);
@@ -274,8 +320,12 @@ class EmergencyProvider extends ChangeNotifier {
   }
 
   Future<void> deleteHospital(String hospitalId) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify saved hospitals.');
+    }
+    final hasPermission = _userProvider?.hasEmergencyPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) return;
 
     try {
       await _db.collection('users').doc(uid).collection('saved_hospitals').doc(hospitalId).delete();
@@ -295,9 +345,40 @@ class EmergencyProvider extends ChangeNotifier {
   // ==========================================
 
   Future<void> triggerSOSAlert(BuildContext context) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can trigger SOS alerts.');
+    }
     if (_isSosTriggered) return;
     _isSosTriggered = true;
     notifyListeners();
+
+    // Update SOS active state in Firestore Mother document first
+    final uid = _userId;
+    double? lat;
+    double? lng;
+    try {
+      final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+      // Try to fetch location quickly (getCurrentPosition has timeout in LocationProvider)
+      final position = await locationProvider.fetchLocation(context);
+      if (position != null) {
+        lat = position.latitude;
+        lng = position.longitude;
+      }
+    } catch (e) {
+      debugPrint('Error getting location during SOS trigger: $e');
+    }
+
+    try {
+      await _db.collection('users').doc(uid).update({
+        'sosActive': true,
+        'sosLatitude': lat,
+        'sosLongitude': lng,
+        'sosTriggeredAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('SOS state updated in Firestore for $uid');
+    } catch (e) {
+      debugPrint('Error updating SOS state in Firestore: $e');
+    }
 
     // 1. Show high-priority emergency notification
     try {
@@ -343,11 +424,27 @@ class EmergencyProvider extends ChangeNotifier {
     }
   }
 
-  void cancelSOSAlert() {
+  Future<void> cancelSOSAlert() async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can cancel SOS alerts.');
+    }
     _isSosTriggered = false;
     _alarmVibrationTimer?.cancel();
     _alarmVibrationTimer = null;
     notifyListeners();
+
+    try {
+      final uid = _userId;
+      await _db.collection('users').doc(uid).update({
+        'sosActive': false,
+        'sosLatitude': FieldValue.delete(),
+        'sosLongitude': FieldValue.delete(),
+        'sosTriggeredAt': FieldValue.delete(),
+      });
+      debugPrint('SOS state cleared in Firestore for $uid');
+    } catch (e) {
+      debugPrint('Error clearing SOS state in Firestore: $e');
+    }
   }
 
   @override

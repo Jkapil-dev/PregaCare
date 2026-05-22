@@ -2,10 +2,13 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../utils/effective_uid.dart';
+import 'user_provider.dart';
 
 class MoodProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   StreamSubscription<User?>? _authSubscription;
+  UserProvider? _userProvider;
 
   List<Map<String, dynamic>> _moods = [];
   bool _isLoading = false;
@@ -37,9 +40,32 @@ class MoodProvider extends ChangeNotifier {
     });
   }
 
+  void update(UserProvider userProvider) {
+    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+
+    final oldHasPermission = _userProvider?.hasTrackerPermission ?? false;
+    final newHasPermission = userProvider.hasTrackerPermission;
+
+    _userProvider = userProvider;
+
+    if (oldEffectiveUid != newEffectiveUid || oldHasPermission != newHasPermission) {
+      if (newHasPermission && newEffectiveUid != null && newEffectiveUid.isNotEmpty) {
+        loadMoods();
+      } else {
+        _moods = [];
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  String get _userId => EffectiveUidProvider.getEffectiveUid();
+
   Future<void> loadMoods() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final hasPermission = _userProvider?.hasTrackerPermission ?? true;
+    final uid = _userId;
+    if (!hasPermission || uid.isEmpty) {
       _moods = [];
       _isLoading = false;
       notifyListeners();
@@ -53,7 +79,7 @@ class MoodProvider extends ChangeNotifier {
     try {
       final snapshot = await _db
           .collection('users')
-          .doc(user.uid)
+          .doc(uid)
           .collection('moods')
           .get();
 
@@ -69,8 +95,12 @@ class MoodProvider extends ChangeNotifier {
   }
 
   Future<void> saveMood(String moodString) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify moods.');
+    }
+    final hasPermission = _userProvider?.hasTrackerPermission ?? true;
+    final uid = _userId;
+    if (!hasPermission || uid.isEmpty) return;
 
     _isLoading = true;
     notifyListeners();
@@ -81,7 +111,7 @@ class MoodProvider extends ChangeNotifier {
 
       await _db
           .collection('users')
-          .doc(user.uid)
+          .doc(uid)
           .collection('moods')
           .doc(todayStr)
           .set({

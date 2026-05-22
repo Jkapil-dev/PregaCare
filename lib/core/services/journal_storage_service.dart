@@ -5,11 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/journal_entry.dart';
 
+import '../utils/effective_uid.dart';
+
 class JournalStorageService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String? get _uid => _auth.currentUser?.uid;
+  String? get _uid => EffectiveUidProvider.getEffectiveUid();
   String get _keyJournal => 'maatricare_journals_v1_${_uid ?? "guest"}';
 
   /// Save or Update a journal entry (One Day = One Journal Entry constraint)

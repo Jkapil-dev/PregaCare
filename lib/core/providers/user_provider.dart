@@ -2,15 +2,26 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../utils/effective_uid.dart';
+import '../services/notification_service.dart';
 
 /// Centralized state provider for User Profile details fetched from Firestore.
 class UserProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _motherDocSubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _connectionDocSubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _motherNotificationSettingsSubscription;
 
   Map<String, dynamic>? _profile;
+  Map<String, dynamic>? _motherProfile;
+  Map<String, dynamic>? _connectionData;
+  Map<String, dynamic>? _motherNotificationSettings;
   bool _isLoading = true;
   String? _errorMessage;
+  Timer? _partnerSosVibrationTimer;
 
   UserProvider() {
     _init();
@@ -18,6 +29,8 @@ class UserProvider extends ChangeNotifier {
 
   // --- Getters ---
   Map<String, dynamic>? get profile => _profile;
+  Map<String, dynamic>? get motherProfile => _motherProfile;
+  Map<String, dynamic>? get motherNotificationSettings => _motherNotificationSettings;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -43,29 +56,104 @@ class UserProvider extends ChangeNotifier {
     return 0.0;
   }
 
+  // --- Partner Role & Linking Getters ---
+  String get role => _profile?['role'] ?? 'mother';
+  bool get isPartner => role == 'partner';
+  bool get isMother => role == 'mother';
+  bool get isLinked => _profile?['linkedConnectionId'] != null && (_profile?['linkedConnectionId'] as String).isNotEmpty;
+  String? get linkedPartnerUid => _profile?['linkedPartnerUid'] as String?;
+  String? get linkedMotherUid => _profile?['linkedMotherUid'] as String?;
+  String? get linkedConnectionId => _profile?['linkedConnectionId'] as String?;
+  Map<String, dynamic>? get connectionData => _connectionData;
+
+  Map<String, bool> get permissions {
+    if (_connectionData == null) return {};
+    final raw = _connectionData!['permissions'];
+    if (raw is Map) {
+      return Map<String, bool>.from(raw.map((k, v) => MapEntry(k.toString(), v == true)));
+    }
+    return {};
+  }
+
+  bool get hasTrackerPermission {
+    if (isMother) return true;
+    return permissions['viewTracker'] ?? false;
+  }
+
+  bool get hasEmergencyPermission {
+    if (isMother) return true;
+    return permissions['viewEmergency'] ?? false;
+  }
+
+  bool get hasRemindersPermission {
+    if (isMother) return true;
+    return permissions['reminders'] ?? permissions['viewReminders'] ?? false;
+  }
+
+  bool get hasNotificationsPermission {
+    if (isMother) return true;
+    return permissions['viewNotifications'] ?? false;
+  }
+
+  bool get hasAppointmentsPermission {
+    if (isMother) return true;
+    return permissions['appointments'] ?? permissions['viewReminders'] ?? false;
+  }
+
+  bool get hasMedicinesPermission {
+    if (isMother) return true;
+    return permissions['medicines'] ?? permissions['viewTracker'] ?? false;
+  }
+
+  bool get hasBabyUpdatesPermission {
+    if (isMother) return true;
+    return permissions['babyUpdates'] ?? permissions['viewTracker'] ?? false;
+  }
+
+  bool get hasEmergencyAlertsPermission {
+    if (isMother) return true;
+    return permissions['emergencyAlerts'] ?? permissions['viewEmergency'] ?? false;
+  }
+
+  Map<String, dynamic>? get _pregnancyProfileMap => (isPartner && _motherProfile != null) ? _motherProfile : _profile;
+
   // --- Pregnancy Profile Getters ---
-  String get bloodGroup => _profile?['bloodGroup'] ?? '';
-  String get doctorName => _profile?['doctorName'] ?? '';
-  String get hospitalName => _profile?['hospitalName'] ?? '';
-  String get lmpDateString => _profile?['lmpDate'] ?? '';
-  bool get isFirstPregnancy => _profile?['isFirstPregnancy'] ?? true;
-  int get pregnancyNumber => _profile?['pregnancyNumber'] ?? 1;
+  String get bloodGroup => _pregnancyProfileMap?['bloodGroup'] ?? '';
+  String get doctorName => _pregnancyProfileMap?['doctorName'] ?? '';
+  String get hospitalName => _pregnancyProfileMap?['hospitalName'] ?? '';
+  String get lmpDateString => _pregnancyProfileMap?['lmpDate'] ?? '';
+  bool get isFirstPregnancy => _pregnancyProfileMap?['isFirstPregnancy'] ?? true;
+  int get pregnancyNumber => _pregnancyProfileMap?['pregnancyNumber'] ?? 1;
 
   // --- Medical Info Getters ---
   List<String> get allergies {
-    final list = _profile?['allergies'];
+    if (!hasEmergencyPermission) return [];
+    final list = _pregnancyProfileMap?['allergies'];
     if (list is List) return List<String>.from(list);
     return [];
   }
   List<String> get conditions {
-    final list = _profile?['conditions'];
+    if (!hasEmergencyPermission) return [];
+    final list = _pregnancyProfileMap?['conditions'];
     if (list is List) return List<String>.from(list);
     return [];
   }
-  String get emergencyContactName => _profile?['emergencyContactName'] ?? '';
-  String get emergencyContactPhone => _profile?['emergencyContactPhone'] ?? '';
-  String get medications => _profile?['medications'] ?? '';
-  String get healthNotes => _profile?['healthNotes'] ?? '';
+  String get emergencyContactName {
+    if (!hasEmergencyPermission) return '';
+    return _pregnancyProfileMap?['emergencyContactName'] ?? '';
+  }
+  String get emergencyContactPhone {
+    if (!hasEmergencyPermission) return '';
+    return _pregnancyProfileMap?['emergencyContactPhone'] ?? '';
+  }
+  String get medications {
+    if (!hasTrackerPermission) return '';
+    return _pregnancyProfileMap?['medications'] ?? '';
+  }
+  String get healthNotes {
+    if (!hasEmergencyPermission) return '';
+    return _pregnancyProfileMap?['healthNotes'] ?? '';
+  }
 
   // --- Settings Getters ---
   Map<String, bool> get notificationSettings {
@@ -87,10 +175,8 @@ class UserProvider extends ChangeNotifier {
     return {'darkMode': false, 'language': 'English', 'units': 'Metric'};
   }
 
-
-
   int get pregnancyWeek {
-    final lmpStr = _profile?['lmpDate'];
+    final lmpStr = _pregnancyProfileMap?['lmpDate'];
     if (lmpStr != null) {
       final lmp = DateTime.tryParse(lmpStr);
       if (lmp != null) {
@@ -99,7 +185,7 @@ class UserProvider extends ChangeNotifier {
         return calcWeek >= 0 ? calcWeek : 0;
       }
     }
-    return _profile?['pregnancyWeek'] ?? 0;
+    return _pregnancyProfileMap?['pregnancyWeek'] ?? 0;
   }
 
   int get trimester {
@@ -115,6 +201,8 @@ class UserProvider extends ChangeNotifier {
     if (week >= 40) return 1.0;
     return week / 40.0;
   }
+
+  static Map<int, Map<String, String>> get weeklyDevelopment => _weeklyDevelopment;
 
   static const Map<int, Map<String, String>> _weeklyDevelopment = {
     1: {
@@ -368,13 +456,14 @@ class UserProvider extends ChangeNotifier {
   String get babySize => weeklyDevelopmentStats['size'] ?? 'Watermelon 🍉';
 
   double get weight {
-    final wt = _profile?['weight'];
+    if (!hasTrackerPermission) return 0.0;
+    final wt = _pregnancyProfileMap?['weight'];
     if (wt is num) return wt.toDouble();
     return 0.0;
   }
 
   String get dueDateString {
-    final dateStr = _profile?['dueDate'];
+    final dateStr = _pregnancyProfileMap?['dueDate'];
     if (dateStr != null) {
       final dt = DateTime.tryParse(dateStr);
       if (dt != null) {
@@ -385,32 +474,45 @@ class UserProvider extends ChangeNotifier {
   }
 
   // --- Health Vitals & History Getters ---
-  String get bpSys => _profile?['bpSys']?.toString() ?? '';
-  String get bpDia => _profile?['bpDia']?.toString() ?? '';
+  String get bpSys {
+    if (!hasTrackerPermission) return '';
+    return _pregnancyProfileMap?['bpSys']?.toString() ?? '';
+  }
+  String get bpDia {
+    if (!hasTrackerPermission) return '';
+    return _pregnancyProfileMap?['bpDia']?.toString() ?? '';
+  }
 
   List<String> get bpHistory {
-    final list = _profile?['bpHistory'];
+    if (!hasTrackerPermission) return [];
+    final list = _pregnancyProfileMap?['bpHistory'];
     if (list is List) {
       return List<String>.from(list);
     }
     return [];
   }
 
-  int get waterGlasses => _profile?['waterGlasses'] ?? 0;
+  int get waterGlasses {
+    if (!hasTrackerPermission) return 0;
+    return _pregnancyProfileMap?['waterGlasses'] ?? 0;
+  }
 
   double get sleepHours {
-    final sleep = _profile?['sleepHours'];
+    if (!hasTrackerPermission) return 0.0;
+    final sleep = _pregnancyProfileMap?['sleepHours'];
     if (sleep is num) return sleep.toDouble();
     return 0.0;
   }
 
   double get temperature {
-    final temp = _profile?['temperature'];
+    if (!hasTrackerPermission) return 0.0;
+    final temp = _pregnancyProfileMap?['temperature'];
     if (temp is num) return temp.toDouble();
     return 0.0;
   }
 
   Map<String, bool> get symptoms {
+    if (!hasTrackerPermission) return {};
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final history = symptomsHistory;
@@ -422,17 +524,22 @@ class UserProvider extends ChangeNotifier {
   }
 
   Map<String, List<String>> get symptomsHistory {
-    final raw = _profile?['symptomsHistory'];
+    if (!hasTrackerPermission) return {};
+    final raw = _pregnancyProfileMap?['symptomsHistory'];
     if (raw is Map) {
       return Map<String, List<String>>.from(raw.map((k, v) => MapEntry(k.toString(), List<String>.from(v ?? []))));
     }
     return {};
   }
 
-  int get streak => _profile?['streak'] ?? 0;
+  int get streak {
+    if (!hasTrackerPermission) return 0;
+    return _pregnancyProfileMap?['streak'] ?? 0;
+  }
 
   List<String> get kickLogs {
-    final list = _profile?['kickLogs'];
+    if (!hasTrackerPermission) return [];
+    final list = _pregnancyProfileMap?['kickLogs'];
     if (list is List) {
       return List<String>.from(list);
     }
@@ -440,12 +547,15 @@ class UserProvider extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> get contractionLogs {
-    final list = _profile?['contractionLogs'];
+    if (!hasTrackerPermission) return [];
+    final list = _pregnancyProfileMap?['contractionLogs'];
     if (list is List) {
       return List<Map<String, dynamic>>.from(list.map((item) => Map<String, dynamic>.from(item)));
     }
     return [];
   }
+
+  String get profileTargetUid => (isPartner && linkedMotherUid != null) ? linkedMotherUid! : uid;
 
   /// Initialize Auth Listener to fetch user profile when authenticated
   void _init() {
@@ -456,11 +566,109 @@ class UserProvider extends ChangeNotifier {
         await fetchProfile(user.uid);
       } else {
         debugPrint('UserProvider: User logged out. Clearing profile.');
+        await _cancelSubscriptions();
         _profile = null;
         _isLoading = false;
         notifyListeners();
       }
     });
+  }
+
+  /// Cancel all active Firestore snapshot listeners
+  Future<void> _cancelSubscriptions() async {
+    await _userDocSubscription?.cancel();
+    _userDocSubscription = null;
+    await _cancelMotherSubscription();
+    await _cancelConnectionSubscription();
+    await _motherNotificationSettingsSubscription?.cancel();
+    _motherNotificationSettingsSubscription = null;
+    _motherNotificationSettings = null;
+    _partnerSosVibrationTimer?.cancel();
+    _partnerSosVibrationTimer = null;
+  }
+
+  Future<void> _cancelMotherSubscription() async {
+    await _motherDocSubscription?.cancel();
+    _motherDocSubscription = null;
+    _motherProfile = null;
+  }
+
+  Future<void> _cancelConnectionSubscription() async {
+    await _connectionDocSubscription?.cancel();
+    _connectionDocSubscription = null;
+    _connectionData = null;
+  }
+
+  void _listenToMotherProfile(String motherUid) {
+    if (_motherDocSubscription != null) return;
+    _motherDocSubscription = _db.collection('users').doc(motherUid).snapshots().listen((docSnap) {
+      if (docSnap.exists) {
+        final data = docSnap.data();
+        final oldSosActive = _motherProfile?['sosActive'] == true;
+        _motherProfile = data;
+        debugPrint('UserProvider: Mother profile updated');
+
+        final newSosActive = data?['sosActive'] == true;
+        if (newSosActive != oldSosActive) {
+          _handleMotherSosStateChange(newSosActive, data);
+        }
+
+        notifyListeners();
+      }
+    }, onError: (e) {
+      debugPrint('UserProvider: Mother profile listen error: $e');
+    });
+  }
+
+  void _listenToConnection(String connectionId) {
+    if (_connectionDocSubscription != null) return;
+    _connectionDocSubscription = _db.collection('pregnancy_connections').doc(connectionId).snapshots().listen((docSnap) {
+      if (docSnap.exists) {
+        _connectionData = docSnap.data();
+        debugPrint('UserProvider: Connection data updated');
+        notifyListeners();
+      }
+    }, onError: (e) {
+      debugPrint('UserProvider: Connection listen error: $e');
+    });
+  }
+
+  void _listenToMotherNotificationSettings(String motherUid) {
+    _motherNotificationSettingsSubscription?.cancel();
+    _motherNotificationSettingsSubscription = _db
+        .collection('users')
+        .doc(motherUid)
+        .collection('notification_settings')
+        .doc('settings')
+        .snapshots()
+        .listen((docSnap) {
+      if (docSnap.exists) {
+        _motherNotificationSettings = docSnap.data();
+        debugPrint('UserProvider: Mother notification settings updated: $_motherNotificationSettings');
+        notifyListeners();
+      }
+    }, onError: (e) {
+      debugPrint('UserProvider: Mother notification settings listen error: $e');
+    });
+  }
+
+  void _handleMotherSosStateChange(bool active, Map<String, dynamic>? data) {
+    _partnerSosVibrationTimer?.cancel();
+    _partnerSosVibrationTimer = null;
+
+    if (active) {
+      final emergencySharingAllowed = _motherNotificationSettings?['sharingSettings']?['emergencyAlerts'] ?? true;
+      if (emergencySharingAllowed && hasEmergencyAlertsPermission) {
+        unawaited(NotificationService().showEmergencySOSNotification());
+        
+        _partnerSosVibrationTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+          HapticFeedback.vibrate();
+        });
+        debugPrint('UserProvider: Triggered SOS siren/haptics loop on Partner device');
+      }
+    } else {
+      debugPrint('UserProvider: SOS deactivated. Stopped haptics on Partner device');
+    }
   }
 
   /// Fetch Firestore document users/{uid}
@@ -470,21 +678,54 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final doc = await _db.collection('users').doc(uid).get();
-      if (doc.exists) {
-        _profile = doc.data();
-        debugPrint('UserProvider: Profile loaded. onboardingCompleted = $isOnboardingCompleted');
-      } else {
-        _profile = null;
-        debugPrint('UserProvider: Profile document does not exist for $uid');
-      }
-      _errorMessage = null;
+      await _cancelSubscriptions();
+
+      _userDocSubscription = _db.collection('users').doc(uid).snapshots().listen((docSnap) async {
+        if (docSnap.exists) {
+          _profile = docSnap.data();
+          debugPrint('UserProvider: Profile loaded/updated. onboardingCompleted = $isOnboardingCompleted, role = $role');
+
+          // Sync FCM device token safely in background
+          unawaited(NotificationService().syncDeviceToken(uid));
+
+          final motherUid = _profile?['linkedMotherUid'] as String?;
+          final connectionId = _profile?['linkedConnectionId'] as String?;
+
+          if (role == 'partner' && motherUid != null && motherUid.isNotEmpty) {
+            EffectiveUidProvider.update(motherUid);
+            _listenToMotherProfile(motherUid);
+            _listenToMotherNotificationSettings(motherUid);
+          } else {
+            EffectiveUidProvider.update(uid);
+            await _cancelMotherSubscription();
+            await _motherNotificationSettingsSubscription?.cancel();
+            _motherNotificationSettingsSubscription = null;
+            _motherNotificationSettings = null;
+          }
+
+          if (connectionId != null && connectionId.isNotEmpty) {
+            _listenToConnection(connectionId);
+          } else {
+            await _cancelConnectionSubscription();
+          }
+        } else {
+          _profile = null;
+          await _cancelSubscriptions();
+          debugPrint('UserProvider: Profile document does not exist for $uid');
+        }
+        _isLoading = false;
+        _errorMessage = null;
+        notifyListeners();
+      }, onError: (e) {
+        _errorMessage = e.toString();
+        _isLoading = false;
+        notifyListeners();
+      });
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('UserProvider fetchProfile error: $e');
-    } finally {
       _isLoading = false;
       notifyListeners();
+      debugPrint('UserProvider fetchProfile error: $e');
     }
   }
 
@@ -503,12 +744,49 @@ class UserProvider extends ChangeNotifier {
 
     try {
       final updateData = Map<String, dynamic>.from(data);
-      updateData['uid'] = user.uid;
-      updateData['email'] = user.email;
-      updateData['updatedAt'] = FieldValue.serverTimestamp();
+      if (role == 'partner') {
+        final personalData = <String, dynamic>{};
+        final pregnancyData = <String, dynamic>{};
+        const personalKeys = {
+          'uid',
+          'email',
+          'displayName',
+          'phoneNumber',
+          'age',
+          'height',
+          'role',
+          'onboardingCompleted',
+          'linkedPartnerUid',
+          'linkedMotherUid',
+          'linkedConnectionId',
+          'preferences',
+          'notificationSettings',
+        };
+        updateData.forEach((key, value) {
+          if (personalKeys.contains(key)) {
+            personalData[key] = value;
+          } else {
+            pregnancyData[key] = value;
+          }
+        });
 
-      await _db.collection('users').doc(user.uid).set(updateData, SetOptions(merge: true));
-      await fetchProfile(user.uid);
+        if (personalData.isNotEmpty) {
+          personalData['updatedAt'] = FieldValue.serverTimestamp();
+          await _db.collection('users').doc(user.uid).set(personalData, SetOptions(merge: true));
+        }
+        if (pregnancyData.isNotEmpty) {
+          pregnancyData['updatedAt'] = FieldValue.serverTimestamp();
+          await _db.collection('users').doc(profileTargetUid).set(pregnancyData, SetOptions(merge: true));
+        }
+      } else {
+        final targetUid = profileTargetUid;
+        if (targetUid == user.uid) {
+          updateData['uid'] = user.uid;
+          updateData['email'] = user.email;
+        }
+        updateData['updatedAt'] = FieldValue.serverTimestamp();
+        await _db.collection('users').doc(targetUid).set(updateData, SetOptions(merge: true));
+      }
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('UserProvider updateProfile error: $e');
@@ -531,7 +809,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> updateSymptom(String symptom, bool value) async {
-    final currentHistory = Map<String, dynamic>.from(_profile?['symptomsHistory'] ?? symptomsHistory);
+    final currentHistory = Map<String, dynamic>.from(_pregnancyProfileMap?['symptomsHistory'] ?? symptomsHistory);
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final todayList = List<String>.from(currentHistory[todayStr] ?? []);
@@ -583,6 +861,11 @@ class UserProvider extends ChangeNotifier {
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _userDocSubscription?.cancel();
+    _motherDocSubscription?.cancel();
+    _connectionDocSubscription?.cancel();
+    _motherNotificationSettingsSubscription?.cancel();
+    _partnerSosVibrationTimer?.cancel();
     super.dispose();
   }
 }

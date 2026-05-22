@@ -14,7 +14,8 @@ import 'package:maatricare/core/models/consultation.dart';
 // Providers & Services
 import 'package:maatricare/core/providers/medicine_provider.dart';
 import 'package:maatricare/core/providers/appointment_provider.dart';
-import 'package:maatricare/core/services/vaccination_storage_service.dart';
+import 'package:maatricare/core/providers/vaccination_provider.dart';
+import 'package:maatricare/core/providers/user_provider.dart';
 
 class MedicationCarePage extends StatefulWidget {
   const MedicationCarePage({super.key});
@@ -24,31 +25,16 @@ class MedicationCarePage extends StatefulWidget {
 }
 
 class _MedicationCarePageState extends State<MedicationCarePage> {
-  final VaccinationStorageService _vaccineService = VaccinationStorageService();
-
-  List<Vaccination> _vaccines = [];
-
-  bool _isLoading = true;
   int _activeTab = 0; // 0 = Medicines, 1 = Vaccinations, 2 = Consultations
 
   @override
   void initState() {
     super.initState();
-    _loadAllData();
-    // Schedule asynchronous loading of dynamic medicines and appointments from Firestore
+    // Schedule asynchronous loading of dynamic medicines, appointments, and vaccinations from Firestore
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<MedicineProvider>(context, listen: false).loadMedicines();
       Provider.of<AppointmentProvider>(context, listen: false).loadAppointments();
-    });
-  }
-
-  Future<void> _loadAllData() async {
-    setState(() => _isLoading = true);
-    final vacList = await _vaccineService.loadVaccinations();
-
-    setState(() {
-      _vaccines = vacList;
-      _isLoading = false;
+      Provider.of<VaccinationProvider>(context, listen: false).loadVaccinations();
     });
   }
 
@@ -84,7 +70,14 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
     final consultations = appointmentProvider.appointments;
     final isAppointmentsLoading = appointmentProvider.isLoading;
 
-    final showSpinner = _isLoading || (isMedsLoading && meds.isEmpty) || (isAppointmentsLoading && consultations.isEmpty);
+    final vaccinationProvider = Provider.of<VaccinationProvider>(context);
+    final vaccines = vaccinationProvider.vaccines;
+    final isVaccinesLoading = vaccinationProvider.isLoading;
+
+    final userProvider = Provider.of<UserProvider>(context);
+    final isPartner = userProvider.isPartner;
+
+    final showSpinner = (isMedsLoading && meds.isEmpty) || (isAppointmentsLoading && consultations.isEmpty) || (isVaccinesLoading && vaccines.isEmpty);
 
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
@@ -117,11 +110,11 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
 
                   // ── ACTIVE CONTENT PANEL ──
                   if (_activeTab == 0) ...[
-                    _buildMedicinesSection(meds, todayStr),
+                    _buildMedicinesSection(meds, todayStr, isPartner),
                   ] else if (_activeTab == 1) ...[
-                    _buildVaccinationsSection(),
+                    _buildVaccinationsSection(vaccines, isPartner),
                   ] else ...[
-                    _buildConsultationsSection(consultations),
+                    _buildConsultationsSection(consultations, isPartner),
                   ],
                   const SizedBox(height: MaatriTheme.spacingXxl),
                 ],
@@ -229,7 +222,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
   }
 
   // ─── 1. MEDICINES SUB-MODULE ───────────────────────────────────────────────
-  Widget _buildMedicinesSection(List<Medicine> meds, String todayStr) {
+  Widget _buildMedicinesSection(List<Medicine> meds, String todayStr, bool isPartner) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -237,28 +230,29 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Active Medications', style: MaatriTypography.titleMedium),
-            ElevatedButton.icon(
-              onPressed: () => _showMedDialog(null),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Add Med'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MaatriColors.coral,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            if (!isPartner)
+              ElevatedButton.icon(
+                onPressed: () => _showMedDialog(null),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Add Med'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MaatriColors.coral,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
         if (meds.isEmpty) ...[
           _buildEmptyPlaceholder('No medicines added yet.', Icons.medication_outlined, subtitle: 'Add your first medicine reminder.'),
         ] else ...[
-          ...meds.map((med) => _buildMedicineCard(med, todayStr)),
+          ...meds.map((med) => _buildMedicineCard(med, todayStr, isPartner)),
         ]
       ],
     );
   }
 
-  Widget _buildMedicineCard(Medicine med, String todayStr) {
+  Widget _buildMedicineCard(Medicine med, String todayStr, bool isPartner) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
@@ -297,15 +291,17 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => _showMedDialog(med),
-                            child: const Icon(Icons.edit_outlined, color: MaatriColors.teal, size: 20),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () => _confirmDeleteMed(med.id),
-                            child: const Icon(Icons.delete_outline_rounded, color: MaatriColors.danger, size: 20),
-                          ),
+                          if (!isPartner) ...[
+                            GestureDetector(
+                              onTap: () => _showMedDialog(med),
+                              child: const Icon(Icons.edit_outlined, color: MaatriColors.teal, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => _confirmDeleteMed(med.id),
+                              child: const Icon(Icons.delete_outline_rounded, color: MaatriColors.danger, size: 20),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 2),
@@ -375,56 +371,57 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                         ),
                       ),
                     ),
-                    Wrap(
-                      spacing: 4,
-                      children: [
-                        InkWell(
-                          onTap: () async {
-                            await Provider.of<MedicineProvider>(context, listen: false)
-                                .updateAdherence(med.id, todayStr, timeLabel, 'Taken');
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: status == 'Taken' ? MaatriColors.success.withValues(alpha: 0.15) : Colors.transparent,
-                              border: Border.all(color: MaatriColors.success),
-                              borderRadius: BorderRadius.circular(6),
+                    if (!isPartner)
+                      Wrap(
+                        spacing: 4,
+                        children: [
+                          InkWell(
+                            onTap: () async {
+                              await Provider.of<MedicineProvider>(context, listen: false)
+                                  .updateAdherence(med.id, todayStr, timeLabel, 'Taken');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: status == 'Taken' ? MaatriColors.success.withValues(alpha: 0.15) : Colors.transparent,
+                                border: Border.all(color: MaatriColors.success),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('Taken', style: TextStyle(color: MaatriColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
-                            child: const Text('Taken', style: TextStyle(color: MaatriColors.success, fontSize: 11, fontWeight: FontWeight.bold)),
                           ),
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            await Provider.of<MedicineProvider>(context, listen: false)
-                                .updateAdherence(med.id, todayStr, timeLabel, 'Missed');
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: status == 'Missed' ? MaatriColors.danger.withValues(alpha: 0.15) : Colors.transparent,
-                              border: Border.all(color: MaatriColors.danger),
-                              borderRadius: BorderRadius.circular(6),
+                          InkWell(
+                            onTap: () async {
+                              await Provider.of<MedicineProvider>(context, listen: false)
+                                  .updateAdherence(med.id, todayStr, timeLabel, 'Missed');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: status == 'Missed' ? MaatriColors.danger.withValues(alpha: 0.15) : Colors.transparent,
+                                border: Border.all(color: MaatriColors.danger),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('Missed', style: TextStyle(color: MaatriColors.danger, fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
-                            child: const Text('Missed', style: TextStyle(color: MaatriColors.danger, fontSize: 11, fontWeight: FontWeight.bold)),
                           ),
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            await Provider.of<MedicineProvider>(context, listen: false)
-                                .updateAdherence(med.id, todayStr, timeLabel, 'Pending');
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: status == 'Pending' ? MaatriColors.mediumGray.withValues(alpha: 0.15) : Colors.transparent,
-                              border: Border.all(color: MaatriColors.mediumGray),
-                              borderRadius: BorderRadius.circular(6),
+                          InkWell(
+                            onTap: () async {
+                              await Provider.of<MedicineProvider>(context, listen: false)
+                                  .updateAdherence(med.id, todayStr, timeLabel, 'Pending');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: status == 'Pending' ? MaatriColors.mediumGray.withValues(alpha: 0.15) : Colors.transparent,
+                                border: Border.all(color: MaatriColors.mediumGray),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('Reset', style: TextStyle(color: MaatriColors.mediumGray, fontSize: 11)),
                             ),
-                            child: const Text('Reset', style: TextStyle(color: MaatriColors.mediumGray, fontSize: 11)),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
               );
@@ -436,7 +433,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
   }
 
   // ─── 2. VACCINATIONS SUB-MODULE ────────────────────────────────────────────
-  Widget _buildVaccinationsSection() {
+  Widget _buildVaccinationsSection(List<Vaccination> vaccines, bool isPartner) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -444,28 +441,29 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Maternal Immunizations', style: MaatriTypography.titleMedium),
-            ElevatedButton.icon(
-              onPressed: () => _showVaccineDialog(null),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Add Vaccine'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MaatriColors.coral,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            if (!isPartner)
+              ElevatedButton.icon(
+                onPressed: () => _showVaccineDialog(null),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Add Vaccine'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MaatriColors.coral,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
-        if (_vaccines.isEmpty) ...[
+        if (vaccines.isEmpty) ...[
           _buildEmptyPlaceholder('No immunization records logged.', Icons.shield_outlined),
         ] else ...[
-          ..._vaccines.map((vac) => _buildVaccinationCard(vac)),
+          ...vaccines.map((vac) => _buildVaccinationCard(vac, isPartner)),
         ]
       ],
     );
   }
 
-  Widget _buildVaccinationCard(Vaccination vac) {
+  Widget _buildVaccinationCard(Vaccination vac, bool isPartner) {
     Color statusColor;
     IconData statusIcon;
 
@@ -517,15 +515,17 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => _showVaccineDialog(vac),
-                            child: const Icon(Icons.edit_outlined, color: MaatriColors.teal, size: 20),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () => _confirmDeleteVaccine(vac.id),
-                            child: const Icon(Icons.delete_outline_rounded, color: MaatriColors.danger, size: 20),
-                          ),
+                          if (!isPartner) ...[
+                            GestureDetector(
+                              onTap: () => _showVaccineDialog(vac),
+                              child: const Icon(Icons.edit_outlined, color: MaatriColors.teal, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => _confirmDeleteVaccine(vac.id),
+                              child: const Icon(Icons.delete_outline_rounded, color: MaatriColors.danger, size: 20),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 2),
@@ -601,7 +601,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
   }
 
   // ─── 3. CONSULTATIONS SUB-MODULE ───────────────────────────────────────────
-  Widget _buildConsultationsSection(List<Consultation> consultations) {
+  Widget _buildConsultationsSection(List<Consultation> consultations, bool isPartner) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -609,28 +609,29 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Antenatal Consultations', style: MaatriTypography.titleMedium),
-            ElevatedButton.icon(
-              onPressed: () => _showConsultationDialog(null),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Add Appointment'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MaatriColors.coral,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            if (!isPartner)
+              ElevatedButton.icon(
+                onPressed: () => _showConsultationDialog(null),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Add Appointment'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MaatriColors.coral,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
         if (consultations.isEmpty) ...[
           _buildEmptyPlaceholder('No consultations scheduled.', Icons.event_available_outlined),
         ] else ...[
-          ...consultations.map((con) => _buildConsultationCard(con)),
+          ...consultations.map((con) => _buildConsultationCard(con, isPartner)),
         ]
       ],
     );
   }
 
-  Widget _buildConsultationCard(Consultation con) {
+  Widget _buildConsultationCard(Consultation con, bool isPartner) {
     Color statusColor;
     IconData statusIcon;
 
@@ -680,15 +681,17 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => _showConsultationDialog(con),
-                            child: const Icon(Icons.edit_outlined, color: MaatriColors.teal, size: 20),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () => _confirmDeleteConsultation(con.id),
-                            child: const Icon(Icons.delete_outline_rounded, color: MaatriColors.danger, size: 20),
-                          ),
+                          if (!isPartner) ...[
+                            GestureDetector(
+                              onTap: () => _showConsultationDialog(con),
+                              child: const Icon(Icons.edit_outlined, color: MaatriColors.teal, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => _confirmDeleteConsultation(con.id),
+                              child: const Icon(Icons.delete_outline_rounded, color: MaatriColors.danger, size: 20),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 2),
@@ -1160,9 +1163,8 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                         vaccinationStatus: status,
                       );
 
-                      await _vaccineService.saveVaccination(vac);
+                      await Provider.of<VaccinationProvider>(context, listen: false).saveVaccination(vac);
                       Navigator.pop(ctx);
-                      _loadAllData();
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -1402,8 +1404,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _vaccineService.deleteVaccination(id);
-              _loadAllData();
+              await Provider.of<VaccinationProvider>(context, listen: false).deleteVaccination(id);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Immunization record deleted.'), backgroundColor: MaatriColors.charcoal, behavior: SnackBarBehavior.floating),
               );

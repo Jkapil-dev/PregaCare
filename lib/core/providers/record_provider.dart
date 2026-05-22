@@ -3,10 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/medical_record.dart';
 import '../services/medical_record_storage_service.dart';
+import '../utils/effective_uid.dart';
+import 'user_provider.dart';
 
 class RecordProvider extends ChangeNotifier {
   final MedicalRecordStorageService _storageService = MedicalRecordStorageService();
   StreamSubscription<User?>? _authSubscription;
+  UserProvider? _userProvider;
 
   List<MedicalRecord> _records = [];
   bool _isLoading = false;
@@ -26,7 +29,36 @@ class RecordProvider extends ChangeNotifier {
     });
   }
 
+  void update(UserProvider userProvider) {
+    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+
+    final oldHasPermission = _userProvider?.hasTrackerPermission ?? false;
+    final newHasPermission = userProvider.hasTrackerPermission;
+
+    _userProvider = userProvider;
+
+    if (oldEffectiveUid != newEffectiveUid || oldHasPermission != newHasPermission) {
+      if (newHasPermission && newEffectiveUid != null && newEffectiveUid.isNotEmpty) {
+        loadRecords();
+      } else {
+        _records = [];
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
   Future<void> loadRecords() async {
+    final hasPermission = _userProvider?.hasTrackerPermission ?? true;
+    final uid = EffectiveUidProvider.getEffectiveUid();
+    if (!hasPermission || uid.isEmpty) {
+      _records = [];
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -43,6 +75,12 @@ class RecordProvider extends ChangeNotifier {
   }
 
   Future<void> saveRecord(MedicalRecord record) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify medical records.');
+    }
+    final hasPermission = _userProvider?.hasTrackerPermission ?? true;
+    if (!hasPermission) return;
+
     _isLoading = true;
     notifyListeners();
 
@@ -59,6 +97,12 @@ class RecordProvider extends ChangeNotifier {
   }
 
   Future<void> deleteRecord(String id) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify medical records.');
+    }
+    final hasPermission = _userProvider?.hasTrackerPermission ?? true;
+    if (!hasPermission) return;
+
     _isLoading = true;
     notifyListeners();
 

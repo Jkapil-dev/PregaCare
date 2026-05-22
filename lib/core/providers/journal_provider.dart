@@ -3,10 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/journal_entry.dart';
 import '../services/journal_storage_service.dart';
+import 'user_provider.dart';
 
 class JournalProvider extends ChangeNotifier {
   final JournalStorageService _storageService = JournalStorageService();
   StreamSubscription<User?>? _authSubscription;
+  UserProvider? _userProvider;
 
   List<JournalEntry> _journals = [];
   bool _isLoading = false;
@@ -14,6 +16,17 @@ class JournalProvider extends ChangeNotifier {
 
   JournalProvider() {
     _init();
+  }
+
+  void update(UserProvider userProvider) {
+    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+
+    _userProvider = userProvider;
+
+    if (oldEffectiveUid != newEffectiveUid) {
+      loadJournals();
+    }
   }
 
   List<JournalEntry> get journals => _journals;

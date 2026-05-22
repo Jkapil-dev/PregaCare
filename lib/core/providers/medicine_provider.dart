@@ -1,14 +1,20 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/medicine.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
+import '../utils/effective_uid.dart';
+import 'user_provider.dart';
 
 class MedicineProvider extends ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   final NotificationService _notificationService = NotificationService();
   StreamSubscription<User?>? _authSubscription;
+  UserProvider? _userProvider;
+
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _medicinesSubscription;
 
   List<Medicine> _medicines = [];
   bool _isLoading = false;
@@ -41,9 +47,8 @@ class MedicineProvider extends ChangeNotifier {
 
   void _init() {
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (user != null) {
-        loadMedicines();
-      } else {
+      if (user == null) {
+        _unsubscribe();
         _medicines = [];
         _isLoading = false;
         notifyListeners();
@@ -51,16 +56,83 @@ class MedicineProvider extends ChangeNotifier {
     });
   }
 
-  /// Helper to get the active user ID
-  String? get _userId {
-    final user = FirebaseAuth.instance.currentUser;
-    return user?.uid;
+  void update(UserProvider userProvider) {
+    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+
+    final oldHasPermission = _userProvider?.hasMedicinesPermission ?? false;
+    final newHasPermission = userProvider.hasMedicinesPermission;
+
+    final oldSharingAllowed = _userProvider?.motherNotificationSettings?['sharingSettings']?['medicineReminders'] ?? true;
+    final newSharingAllowed = userProvider.motherNotificationSettings?['sharingSettings']?['medicineReminders'] ?? true;
+
+    _userProvider = userProvider;
+
+    if (oldEffectiveUid != newEffectiveUid || oldHasPermission != newHasPermission) {
+      if (newHasPermission && newEffectiveUid != null && newEffectiveUid.isNotEmpty) {
+        loadMedicines();
+      } else {
+        _unsubscribe();
+        _medicines = [];
+        _isLoading = false;
+        notifyListeners();
+      }
+    } else if (userProvider.isPartner && oldSharingAllowed != newSharingAllowed) {
+      _syncLocalNotifications();
+    }
   }
 
-  /// Load medicines from Firestore
+  /// Helper to get the active user ID
+  String get _userId {
+    return EffectiveUidProvider.getEffectiveUid();
+  }
+
+  void _unsubscribe() {
+    _medicinesSubscription?.cancel();
+    _medicinesSubscription = null;
+  }
+
+  Future<void> _syncLocalNotifications() async {
+    if (_userProvider?.isPartner != true) return;
+
+    // 1. Cancel all current notification IDs
+    final List<int> idsToCancel = [];
+    for (final med in _medicines) {
+      idsToCancel.addAll(med.notificationIds);
+    }
+    if (idsToCancel.isNotEmpty) {
+      await _notificationService.cancelNotifications(idsToCancel);
+    }
+
+    // 2. Check if sharing is allowed and permissions exist
+    final sharingAllowed = _userProvider?.motherNotificationSettings?['sharingSettings']?['medicineReminders'] ?? true;
+    final hasPermission = _userProvider?.hasMedicinesPermission ?? false;
+
+    if (sharingAllowed && hasPermission) {
+      // 3. Re-schedule upcoming active medicine reminders
+      for (final med in _medicines) {
+        if (med.reminderEnabled && !med.isExpired) {
+          debugPrint('MedicineProvider: Partner scheduling reminders for ${med.medicineName}');
+          await _notificationService.scheduleMedicineReminders(
+            id: med.id,
+            name: med.medicineName,
+            dosage: med.dosage,
+            times: med.selectedTimes,
+            startDate: med.startDate,
+            endDate: med.endDate,
+            durationDays: med.durationDays,
+          );
+        }
+      }
+    }
+  }
+
+  /// Load medicines from Firestore in real-time
   Future<void> loadMedicines() async {
+    final hasPermission = _userProvider?.hasMedicinesPermission ?? true;
     final uid = _userId;
-    if (uid == null) {
+    if (!hasPermission || uid.isEmpty) {
+      _unsubscribe();
       _medicines = [];
       _isLoading = false;
       notifyListeners();
@@ -71,23 +143,44 @@ class MedicineProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    try {
-      final list = await _firestoreService.getMedicines(uid);
-      _medicines = list.where((m) => !m.id.contains('mock')).toList();
+    _unsubscribe();
+
+    final medicinesCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('medicines')
+        .orderBy('createdAt', descending: true);
+
+    _medicinesSubscription = medicinesCollection.snapshots().listen((snapshot) {
+      _medicines = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return Medicine.fromJson(data);
+      }).toList();
+      _medicines = _medicines.where((m) => !m.id.contains('mock')).toList();
+      _isLoading = false;
       _errorMessage = null;
-    } catch (e) {
+
+      // Sync local notifications for Partner
+      _syncLocalNotifications();
+
+      notifyListeners();
+    }, onError: (e) {
       _errorMessage = e.toString();
-      debugPrint('MedicineProvider loadMedicines error: $e');
-    } finally {
       _isLoading = false;
       notifyListeners();
-    }
+      debugPrint('MedicineProvider stream error: $e');
+    });
   }
 
   /// Add or update a medicine and coordinate reminders
   Future<void> saveMedicine(Medicine medicine) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify medicines.');
+    }
+    final hasPermission = _userProvider?.hasMedicinesPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) return;
 
     _isLoading = true;
     notifyListeners();
@@ -117,13 +210,6 @@ class MedicineProvider extends ChangeNotifier {
 
       // 3. Save to Firestore
       await _firestoreService.saveMedicine(uid, updatedMedicine);
-
-      // 4. Update local state
-      if (existingIndex != -1) {
-        _medicines[existingIndex] = updatedMedicine;
-      } else {
-        _medicines.insert(0, updatedMedicine);
-      }
       
       _errorMessage = null;
     } catch (e) {
@@ -137,8 +223,12 @@ class MedicineProvider extends ChangeNotifier {
 
   /// Delete a medicine and cancel scheduled reminders
   Future<void> deleteMedicine(String id) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify medicines.');
+    }
+    final hasPermission = _userProvider?.hasMedicinesPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) return;
 
     _isLoading = true;
     notifyListeners();
@@ -151,9 +241,6 @@ class MedicineProvider extends ChangeNotifier {
         
         // 2. Delete from Firestore
         await _firestoreService.deleteMedicine(uid, id);
-
-        // 3. Update local list
-        _medicines.removeAt(index);
       }
       _errorMessage = null;
     } catch (e) {
@@ -172,8 +259,12 @@ class MedicineProvider extends ChangeNotifier {
     String timeLabel,
     String status,
   ) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify medicines.');
+    }
+    final hasPermission = _userProvider?.hasMedicinesPermission ?? true;
     final uid = _userId;
-    if (uid == null) return;
+    if (!hasPermission || uid.isEmpty) return;
 
     final index = _medicines.indexWhere((m) => m.id == medicineId);
     if (index == -1) return;
@@ -217,13 +308,13 @@ class MedicineProvider extends ChangeNotifier {
       await _firestoreService.updateAdherence(uid, medicineId, updatedLogs);
     } catch (e) {
       debugPrint('MedicineProvider updateAdherence remote save error: $e');
-      // Rollback on failure if necessary, but typically keep local optimistic state
     }
   }
 
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _unsubscribe();
     super.dispose();
   }
 }

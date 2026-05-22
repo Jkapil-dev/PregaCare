@@ -6,12 +6,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/vaccination.dart';
 import 'notification_service.dart';
 
+import '../utils/effective_uid.dart';
+
 class VaccinationStorageService {
   final NotificationService _notificationService = NotificationService();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String? get _uid => _auth.currentUser?.uid;
+  String? get _uid => EffectiveUidProvider.getEffectiveUid();
   String get _keyVaccinations => 'maatricare_vaccinations_v1_${_uid ?? "guest"}';
 
   /// Save single vaccination record, schedule notification, and persist

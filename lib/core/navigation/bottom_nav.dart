@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/colors.dart';
 import '../theme/theme.dart';
+import '../providers/user_provider.dart';
+
 
 /// MaatriCare custom bottom navigation bar
 class MaatriBottomNav extends StatelessWidget {
@@ -13,7 +16,7 @@ class MaatriBottomNav extends StatelessWidget {
     required this.onTap,
   });
 
-  static const _items = [
+  static const _motherItems = [
     _NavItem(icon: Icons.home_rounded, activeIcon: Icons.home_rounded, label: 'Home'),
     _NavItem(icon: Icons.favorite_outline_rounded, activeIcon: Icons.favorite_rounded, label: 'Track'),
     _NavItem(icon: Icons.auto_awesome_outlined, activeIcon: Icons.auto_awesome, label: 'AI'),
@@ -21,8 +24,20 @@ class MaatriBottomNav extends StatelessWidget {
     _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
   ];
 
+  static const _partnerItems = [
+    _NavItem(icon: Icons.home_rounded, activeIcon: Icons.home_rounded, label: 'Home'),
+    _NavItem(icon: Icons.favorite_outline_rounded, activeIcon: Icons.favorite_rounded, label: 'Support'),
+    _NavItem(icon: Icons.child_care_rounded, activeIcon: Icons.child_care_rounded, label: 'Baby'),
+    _NavItem(icon: Icons.shield_outlined, activeIcon: Icons.shield_rounded, label: 'Safety'),
+    _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final isPartner = userProvider.role == 'partner';
+    final items = isPartner ? _partnerItems : _motherItems;
+
     return Container(
       decoration: BoxDecoration(
         color: MaatriColors.pureWhite,
@@ -43,8 +58,8 @@ class MaatriBottomNav extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(_items.length, (index) {
-              final item = _items[index];
+            children: List.generate(items.length, (index) {
+              final item = items[index];
               final isActive = index == currentIndex;
               return _buildNavItem(context, item, isActive, index);
             }),

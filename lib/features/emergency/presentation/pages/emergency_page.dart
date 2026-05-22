@@ -8,6 +8,7 @@ import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/providers/emergency_provider.dart';
 import '../../../../core/providers/location_provider.dart';
+import '../../../../core/providers/user_provider.dart';
 import '../../../../core/models/emergency_contact.dart';
 import '../../../../core/models/medical_emergency_info.dart';
 import '../../../../core/models/hospital.dart';
@@ -453,6 +454,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
   /// Editable Medical Emergency profile card
   Widget _buildMedicalEmergencyInfoCard(EmergencyProvider emp) {
     final info = emp.medicalInfo;
+    final isPartner = Provider.of<UserProvider>(context).isPartner;
 
     return GlassCard(
       padding: const EdgeInsets.all(MaatriTheme.spacingLg),
@@ -469,10 +471,11 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                   Text('Medical Emergency Profile', style: MaatriTypography.headlineSmall),
                 ],
               ),
-              IconButton(
-                icon: const Icon(Icons.edit_rounded, color: MaatriColors.teal, size: 20),
-                onPressed: () => _showEditMedicalInfoDialog(context, emp),
-              ),
+              if (!isPartner)
+                IconButton(
+                  icon: const Icon(Icons.edit_rounded, color: MaatriColors.teal, size: 20),
+                  onPressed: () => _showEditMedicalInfoDialog(context, emp),
+                ),
             ],
           ),
           const Divider(height: 20, color: MaatriColors.lightGray),
@@ -485,12 +488,14 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                 child: Column(
                   children: [
                     Text('No emergency medical records created yet.', style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () => _showEditMedicalInfoDialog(context, emp),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add Critical Info Now'),
-                    )
+                    if (!isPartner) ...[
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => _showEditMedicalInfoDialog(context, emp),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add Critical Info Now'),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -550,13 +555,15 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
 
   /// Dynamic emergency contacts list CRUD block
   Widget _buildEmergencyContactsList(EmergencyProvider emp) {
+    final isPartner = Provider.of<UserProvider>(context).isPartner;
+
     return Column(
       children: [
         SectionHeader(
           title: 'Emergency Contacts',
           icon: Icons.contact_emergency_rounded,
           iconColor: MaatriColors.danger,
-          actionText: emp.contacts.length < 5 ? '+ Add Contact' : null,
+          actionText: (!isPartner && emp.contacts.length < 5) ? '+ Add Contact' : null,
           onAction: () => _showAddEditContactDialog(context, emp, null),
         ),
         const SizedBox(height: MaatriTheme.spacingSm),
@@ -572,12 +579,14 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                   Text('No emergency contacts added yet.', style: MaatriTypography.titleSmall.copyWith(color: MaatriColors.slate)),
                   const SizedBox(height: 4),
                   Text('Add trusted contacts for quick emergency actions.', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => _showAddEditContactDialog(context, emp, null),
-                    style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.coral),
-                    child: const Text('Add Contact', style: TextStyle(color: Colors.white)),
-                  )
+                  if (!isPartner) ...[
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () => _showAddEditContactDialog(context, emp, null),
+                      style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.coral),
+                      child: const Text('Add Contact', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -687,20 +696,21 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                 icon: const Icon(Icons.sms_rounded, color: MaatriColors.teal, size: 20),
                 onPressed: () => launchUrl(Uri.parse('sms:${contact.phone}')),
               ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded, color: MaatriColors.darkGray),
-                onSelected: (action) {
-                  if (action == 'edit') {
-                    _showAddEditContactDialog(context, emp, contact);
-                  } else if (action == 'delete') {
-                    _showDeleteContactConfirm(context, emp, contact);
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit Contact')),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete Contact', style: TextStyle(color: MaatriColors.danger))),
-                ],
-              ),
+              if (!Provider.of<UserProvider>(context).isPartner)
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded, color: MaatriColors.darkGray),
+                  onSelected: (action) {
+                    if (action == 'edit') {
+                      _showAddEditContactDialog(context, emp, contact);
+                    } else if (action == 'delete') {
+                      _showDeleteContactConfirm(context, emp, contact);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit Contact')),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete Contact', style: TextStyle(color: MaatriColors.danger))),
+                  ],
+                ),
             ],
           )
         ],
@@ -710,6 +720,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
 
   /// Preferred saved & mock location-aware nearby hospitals list
   Widget _buildHospitalsBlock(EmergencyProvider emp) {
+    final isPartner = Provider.of<UserProvider>(context).isPartner;
     // Dynamic mock nearby hospitals computed relative to GPS or default coordinates
     final locationProvider = Provider.of<LocationProvider>(context);
     final isLocationLoaded = locationProvider.currentPosition != null;
@@ -752,7 +763,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
           title: 'Preferred & Nearby Hospitals',
           icon: Icons.local_hospital_rounded,
           iconColor: MaatriColors.teal,
-          actionText: '+ Add Saved',
+          actionText: !isPartner ? '+ Add Saved' : null,
           onAction: () => _showAddHospitalDialog(context, emp),
         ),
         const SizedBox(height: MaatriTheme.spacingSm),
@@ -846,7 +857,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                   else
                     const SizedBox.shrink(),
                   const SizedBox(height: 4),
-                  if (isSaved)
+                  if (isSaved && !Provider.of<UserProvider>(context).isPartner)
                     GestureDetector(
                       onTap: () => emp.deleteHospital(h.id),
                       child: const Icon(Icons.delete_outline_rounded, color: MaatriColors.danger, size: 18),
