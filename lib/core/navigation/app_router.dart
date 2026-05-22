@@ -9,6 +9,10 @@ import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/tracker/tracker_home/presentation/pages/tracker_home_page.dart';
 import '../../features/ai_assistant/presentation/pages/ai_chat_page.dart';
 import '../../features/community/presentation/pages/community_page.dart';
+import '../../features/knowledge_hub/presentation/pages/knowledge_hub_page.dart';
+import '../../features/knowledge_hub/presentation/pages/knowledge_article_detail_page.dart';
+import '../../features/knowledge_hub/presentation/pages/knowledge_category_page.dart';
+import '../../features/knowledge_hub/domain/models/knowledge_article.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/emergency/presentation/pages/emergency_page.dart';
 import '../../features/shared_journey/presentation/pages/shared_journey_page.dart';
@@ -48,6 +52,9 @@ class AppRoutes {
   static const home = '/home';
   static const tracking = '/tracking';
   static const aiAssistant = '/ai';
+  static const knowledgeHub = '/knowledge';
+  static const knowledgeCategory = '/knowledge/category';
+  static const articleDetail = '/knowledge/article';
   static const community = '/community';
   static const profile = '/profile';
   static const emergency = '/emergency';
@@ -161,15 +168,7 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
 
       if (isPartner) {
         // Partners should not access mother-only sections
-        final isMotherRoute = location == AppRoutes.tracking ||
-            location.startsWith('/tracker/') ||
-            location == AppRoutes.healthTracking ||
-            location == AppRoutes.babyMonitoring ||
-            location == AppRoutes.medicationCare ||
-            location == AppRoutes.emotionalWellness ||
-            location == AppRoutes.recordsDocuments ||
-            location == AppRoutes.insightsHistory ||
-            location == AppRoutes.pregnancyProfile ||
+        final isMotherRoute = location == AppRoutes.pregnancyProfile ||
             location == AppRoutes.medicalInfo ||
             location == AppRoutes.sharingPermissions ||
             location == AppRoutes.notificationSharingSettings ||
@@ -246,6 +245,12 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
             ),
           ),
           GoRoute(
+            path: AppRoutes.knowledgeHub,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: KnowledgeHubPage(),
+            ),
+          ),
+          GoRoute(
             path: AppRoutes.community,
             pageBuilder: (context, state) => const NoTransitionPage(
               child: CommunityPage(),
@@ -285,6 +290,32 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
       ),
 
       // Full-screen routes (no bottom nav)
+      GoRoute(
+        path: AppRoutes.articleDetail,
+        builder: (context, state) {
+          final article = state.extra as KnowledgeArticle?;
+          if (article == null) {
+            // Fallback if no article provided
+            return const Scaffold(body: Center(child: Text('Article not found')));
+          }
+          return KnowledgeArticleDetailPage(article: article);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.knowledgeCategory,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final title = extra['category'] as String? ?? 'General';
+          final icon = extra['icon'] as IconData? ?? Icons.library_books_rounded;
+          final color = extra['color'] as Color? ?? Colors.teal;
+          
+          return KnowledgeCategoryPage(
+            categoryTitle: title,
+            categoryIcon: icon,
+            categoryColor: color,
+          );
+        },
+      ),
       GoRoute(
         path: AppRoutes.emergency,
         builder: (context, state) => const EmergencyPage(),

@@ -22,16 +22,14 @@ class AppShell extends StatelessWidget {
 
     if (isPartner) {
       if (location.startsWith(AppRoutes.home)) return 0;
-      if (location.startsWith(AppRoutes.support)) return 1;
-      if (location.startsWith(AppRoutes.babyUpdates)) return 2;
-      if (location.startsWith(AppRoutes.safety)) return 3;
-      if (location.startsWith(AppRoutes.profile)) return 4;
+      if (location.startsWith(AppRoutes.tracking)) return 1;
+      if (location.startsWith(AppRoutes.knowledgeHub)) return 2;
+      if (location.startsWith(AppRoutes.profile)) return 3;
     } else {
       if (location.startsWith(AppRoutes.home)) return 0;
       if (location.startsWith(AppRoutes.tracking)) return 1;
-      if (location.startsWith(AppRoutes.aiAssistant)) return 2;
-      if (location.startsWith(AppRoutes.community)) return 3;
-      if (location.startsWith(AppRoutes.profile)) return 4;
+      if (location.startsWith(AppRoutes.knowledgeHub)) return 2;
+      if (location.startsWith(AppRoutes.profile)) return 3;
     }
     return 0;
   }
@@ -46,15 +44,12 @@ class AppShell extends StatelessWidget {
           context.go(AppRoutes.home);
           break;
         case 1:
-          context.go(AppRoutes.support);
+          context.go(AppRoutes.tracking);
           break;
         case 2:
-          context.go(AppRoutes.babyUpdates);
+          context.go(AppRoutes.knowledgeHub);
           break;
         case 3:
-          context.go(AppRoutes.safety);
-          break;
-        case 4:
           context.go(AppRoutes.profile);
           break;
       }
@@ -67,12 +62,9 @@ class AppShell extends StatelessWidget {
           context.go(AppRoutes.tracking);
           break;
         case 2:
-          context.go(AppRoutes.aiAssistant);
+          context.go(AppRoutes.knowledgeHub);
           break;
         case 3:
-          context.go(AppRoutes.community);
-          break;
-        case 4:
           context.go(AppRoutes.profile);
           break;
       }

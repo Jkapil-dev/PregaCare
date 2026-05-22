@@ -8,6 +8,7 @@ import 'core/navigation/app_router.dart';
 import 'providers/auth_provider.dart';
 import 'core/providers/user_provider.dart';
 import 'core/providers/medicine_provider.dart';
+import 'features/knowledge_hub/presentation/providers/knowledge_provider.dart';
 import 'core/providers/mood_provider.dart';
 import 'core/providers/appointment_provider.dart';
 import 'core/providers/record_provider.dart';
@@ -58,6 +59,11 @@ void main() async {
           create: (_) => MedicineProvider(),
           update: (_, userProvider, medicineProvider) =>
               (medicineProvider ?? MedicineProvider())..update(userProvider),
+        ),
+        ChangeNotifierProxyProvider<UserProvider, KnowledgeProvider>(
+          create: (_) => KnowledgeProvider(),
+          update: (_, userProvider, knowledgeProvider) =>
+              (knowledgeProvider ?? KnowledgeProvider())..update(userProvider),
         ),
         ChangeNotifierProxyProvider<UserProvider, MoodProvider>(
           create: (_) => MoodProvider(),
