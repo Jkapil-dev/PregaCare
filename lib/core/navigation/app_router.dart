@@ -12,6 +12,7 @@ import '../../features/community/presentation/pages/community_page.dart';
 import '../../features/knowledge_hub/presentation/pages/knowledge_hub_page.dart';
 import '../../features/knowledge_hub/presentation/pages/knowledge_article_detail_page.dart';
 import '../../features/knowledge_hub/presentation/pages/knowledge_category_page.dart';
+import '../../features/knowledge_hub/presentation/pages/featured_articles_page.dart';
 import '../../features/knowledge_hub/domain/models/knowledge_article.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/emergency/presentation/pages/emergency_page.dart';
@@ -55,6 +56,7 @@ class AppRoutes {
   static const knowledgeHub = '/knowledge';
   static const knowledgeCategory = '/knowledge/category';
   static const articleDetail = '/knowledge/article';
+  static const featuredArticles = '/knowledge/featured';
   static const community = '/community';
   static const profile = '/profile';
   static const emergency = '/emergency';
@@ -315,6 +317,10 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
             categoryColor: color,
           );
         },
+      ),
+      GoRoute(
+        path: AppRoutes.featuredArticles,
+        builder: (context, state) => const FeaturedArticlesPage(),
       ),
       GoRoute(
         path: AppRoutes.emergency,

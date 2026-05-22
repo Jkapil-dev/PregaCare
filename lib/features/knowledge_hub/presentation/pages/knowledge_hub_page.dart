@@ -38,7 +38,7 @@ class KnowledgeHubPage extends StatelessWidget {
                     ] else ...[
                       _buildQuickCategories(context),
                       const SizedBox(height: 32),
-                      _buildFeaturedArticles(provider),
+                      _buildFeaturedArticles(context, provider),
                       const SizedBox(height: 32),
                       _buildWeeklyGuidance(provider),
                       const SizedBox(height: 32),
@@ -231,23 +231,30 @@ class KnowledgeHubPage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeaturedArticles(KnowledgeProvider provider) {
+  Widget _buildFeaturedArticles(BuildContext context, KnowledgeProvider provider) {
     if (provider.isLoadingFeatured) {
       return _buildSkeletonHorizontalList('Featured Articles');
     }
 
-    final articles = provider.featuredArticles;
-    if (articles.isEmpty) {
+    final allArticles = provider.featuredArticles;
+    if (allArticles.isEmpty) {
       return const SizedBox.shrink(); // Hide if empty
     }
+    
+    // Limit to 5 articles on the home screen
+    final articles = allArticles.take(5).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const ResponsiveSectionHeader(title: 'Featured Articles', actionText: 'See All'),
+        ResponsiveSectionHeader(
+          title: 'Featured Articles', 
+          actionText: 'See All',
+          onAction: () => context.push(AppRoutes.featuredArticles),
+        ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 240,
+          height: 250, // Slightly increased height to ensure no overflow
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
