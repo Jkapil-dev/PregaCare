@@ -99,9 +99,9 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: MaatriColors.cloudGray.withValues(alpha: 0.5),
+                color: MaatriColors.cloudGray.withOpacity( 0.5),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: MaatriColors.lightGray.withValues(alpha: 0.5)),
+                border: Border.all(color: MaatriColors.lightGray.withOpacity( 0.5)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +112,7 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: catColor.withValues(alpha: 0.15),
+                          color: catColor.withOpacity( 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(record.fileIcon, color: catColor, size: 24),
@@ -134,7 +134,7 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: catColor.withValues(alpha: 0.15),
+                                    color: catColor.withOpacity( 0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -172,9 +172,9 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
               child: Container(
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Colors.black.withOpacity( 0.03),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: MaatriColors.lightGray.withValues(alpha: 0.3)),
+                  border: Border.all(color: MaatriColors.lightGray.withOpacity( 0.3)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: _hasError
@@ -266,7 +266,7 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: catColor.withValues(alpha: 0.1),
+                color: catColor.withOpacity( 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(record.fileIcon, size: 64, color: catColor),

@@ -27,7 +27,7 @@ class MaatriTheme {
   // ─── Elevation / Shadow Tokens ─────────────────────────────
   static List<BoxShadow> get shadowSm => [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
+          color: Colors.black.withOpacity( 0.04),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),
@@ -35,7 +35,7 @@ class MaatriTheme {
 
   static List<BoxShadow> get shadowMd => [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.06),
+          color: Colors.black.withOpacity( 0.06),
           blurRadius: 16,
           offset: const Offset(0, 4),
         ),
@@ -43,7 +43,7 @@ class MaatriTheme {
 
   static List<BoxShadow> get shadowLg => [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
+          color: Colors.black.withOpacity( 0.08),
           blurRadius: 24,
           offset: const Offset(0, 8),
         ),
@@ -51,7 +51,7 @@ class MaatriTheme {
 
   static List<BoxShadow> get glowCoral => [
         BoxShadow(
-          color: MaatriColors.coral.withValues(alpha: 0.3),
+          color: MaatriColors.coral.withOpacity( 0.3),
           blurRadius: 20,
           offset: const Offset(0, 4),
         ),
@@ -59,7 +59,7 @@ class MaatriTheme {
 
   static List<BoxShadow> get glowTeal => [
         BoxShadow(
-          color: MaatriColors.teal.withValues(alpha: 0.3),
+          color: MaatriColors.teal.withOpacity( 0.3),
           blurRadius: 20,
           offset: const Offset(0, 4),
         ),

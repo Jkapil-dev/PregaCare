@@ -237,7 +237,7 @@ class _StatBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: Colors.white.withOpacity( 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -252,7 +252,7 @@ class _StatBadge extends StatelessWidget {
           Text(
             label,
             style: MaatriTypography.labelSmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Colors.white.withOpacity( 0.8),
             ),
           ),
         ],
@@ -286,7 +286,7 @@ class _MenuItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withOpacity( 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 22),

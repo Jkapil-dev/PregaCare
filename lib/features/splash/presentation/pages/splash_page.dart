@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
-import '../../../../core/theme/theme.dart';
 import '../../../../core/navigation/app_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/auth_provider.dart';

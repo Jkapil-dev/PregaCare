@@ -6,7 +6,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:provider/provider.dart';
 import '../../../../core/providers/user_provider.dart';
-import '../../../../providers/auth_provider.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
@@ -394,7 +393,7 @@ class _PregnancySetupPageState extends State<PregnancySetupPage> {
               width: double.infinity,
               padding: const EdgeInsets.all(MaatriTheme.spacingMd),
               decoration: BoxDecoration(
-                color: MaatriColors.tealLight.withValues(alpha: 0.3),
+                color: MaatriColors.tealLight.withOpacity( 0.3),
                 borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
               ),
               child: Column(children: [
@@ -556,10 +555,10 @@ class _PregnancySetupPageState extends State<PregnancySetupPage> {
               Text('Week $_currentWeek', style: MaatriTypography.weekCounter.copyWith(color: Colors.white)),
               const SizedBox(height: 4),
               if (_dueDate != null)
-                Text('Due ${DateFormat('MMM d, yyyy').format(_dueDate!)}', style: MaatriTypography.bodyLarge.copyWith(color: Colors.white.withValues(alpha: 0.9))),
+                Text('Due ${DateFormat('MMM d, yyyy').format(_dueDate!)}', style: MaatriTypography.bodyLarge.copyWith(color: Colors.white.withOpacity( 0.9))),
               if (_nameController.text.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Hello, ${_nameController.text.trim()}!', style: MaatriTypography.titleMedium.copyWith(color: Colors.white.withValues(alpha: 0.9))),
+                Text('Hello, ${_nameController.text.trim()}!', style: MaatriTypography.titleMedium.copyWith(color: Colors.white.withOpacity( 0.9))),
               ],
             ]),
           ),

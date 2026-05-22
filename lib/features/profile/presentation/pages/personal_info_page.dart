@@ -114,7 +114,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                     children: [
                       CircleAvatar(
                         radius: 40,
-                        backgroundColor: MaatriColors.coral.withValues(alpha: 0.1),
+                        backgroundColor: MaatriColors.coral.withOpacity( 0.1),
                         child: const Icon(
                           Icons.person_rounded,
                           color: MaatriColors.coral,

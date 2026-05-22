@@ -244,7 +244,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: MaatriColors.coral.withValues(alpha: 0.12),
+              color: MaatriColors.coral.withOpacity( 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.people_alt_rounded, color: MaatriColors.coral, size: 24),
@@ -292,7 +292,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: MaatriColors.coral.withValues(alpha: 0.1),
+                      color: MaatriColors.coral.withOpacity( 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.child_care_rounded, color: MaatriColors.coral, size: 24),
@@ -344,7 +344,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: MaatriColors.teal.withValues(alpha: 0.1),
+                        color: MaatriColors.teal.withOpacity( 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.favorite_border_rounded, color: MaatriColors.teal, size: 24),
@@ -453,7 +453,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
             decoration: BoxDecoration(
               color: MaatriColors.softRose,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: MaatriColors.coralLight.withValues(alpha: 0.5)),
+              border: Border.all(color: MaatriColors.coralLight.withOpacity( 0.5)),
             ),
             child: Text(
               code,
@@ -533,7 +533,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: MaatriColors.teal.withValues(alpha: 0.15),
+                backgroundColor: MaatriColors.teal.withOpacity( 0.15),
                 child: Text(
                   initials,
                   style: MaatriTypography.titleMedium.copyWith(
@@ -605,7 +605,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: MaatriColors.coral.withValues(alpha: 0.12),
+                  color: MaatriColors.coral.withOpacity( 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.share_rounded, color: MaatriColors.coral, size: 22),
@@ -647,7 +647,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: MaatriColors.teal.withValues(alpha: 0.12),
+                  color: MaatriColors.teal.withOpacity( 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.notifications_active_rounded, color: MaatriColors.teal, size: 22),
@@ -727,7 +727,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: MaatriColors.coral.withValues(alpha: 0.15),
+                backgroundColor: MaatriColors.coral.withOpacity( 0.15),
                 child: Text(
                   initials,
                   style: MaatriTypography.titleMedium.copyWith(
@@ -868,7 +868,7 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor.withOpacity( 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: iconColor, size: 22),

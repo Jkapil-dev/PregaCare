@@ -158,7 +158,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withOpacity( 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -266,8 +266,8 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: med.isExpired 
-                        ? MaatriColors.mediumGray.withValues(alpha: 0.12)
-                        : MaatriColors.coralLight.withValues(alpha: 0.15),
+                        ? MaatriColors.mediumGray.withOpacity( 0.12)
+                        : MaatriColors.coralLight.withOpacity( 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -383,7 +383,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: status == 'Taken' ? MaatriColors.success.withValues(alpha: 0.15) : Colors.transparent,
+                                color: status == 'Taken' ? MaatriColors.success.withOpacity( 0.15) : Colors.transparent,
                                 border: Border.all(color: MaatriColors.success),
                                 borderRadius: BorderRadius.circular(6),
                               ),
@@ -398,7 +398,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: status == 'Missed' ? MaatriColors.danger.withValues(alpha: 0.15) : Colors.transparent,
+                                color: status == 'Missed' ? MaatriColors.danger.withOpacity( 0.15) : Colors.transparent,
                                 border: Border.all(color: MaatriColors.danger),
                                 borderRadius: BorderRadius.circular(6),
                               ),
@@ -413,7 +413,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: status == 'Pending' ? MaatriColors.mediumGray.withValues(alpha: 0.15) : Colors.transparent,
+                                color: status == 'Pending' ? MaatriColors.mediumGray.withOpacity( 0.15) : Colors.transparent,
                                 border: Border.all(color: MaatriColors.mediumGray),
                                 borderRadius: BorderRadius.circular(6),
                               ),
@@ -495,7 +495,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
+                    color: statusColor.withOpacity( 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(statusIcon, color: statusColor, size: 24),
@@ -569,7 +569,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
+                    color: statusColor.withOpacity( 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -661,7 +661,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
+                    color: statusColor.withOpacity( 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(statusIcon, color: statusColor, size: 24),
@@ -732,7 +732,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
+                    color: statusColor.withOpacity( 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -770,12 +770,12 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
         padding: const EdgeInsets.all(32.0),
         child: Column(
           children: [
-            Icon(icon, size: 48, color: MaatriColors.mediumGray.withValues(alpha: 0.5)),
+            Icon(icon, size: 48, color: MaatriColors.mediumGray.withOpacity( 0.5)),
             const SizedBox(height: 12),
             Text(message, style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate, fontWeight: FontWeight.bold)),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
-              Text(subtitle, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate.withValues(alpha: 0.7))),
+              Text(subtitle, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate.withOpacity( 0.7))),
             ],
           ],
         ),
@@ -891,7 +891,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                         child: FilterChip(
                           label: Text(timeOption),
                           selected: isSelected,
-                          selectedColor: MaatriColors.coralLight.withValues(alpha: 0.4),
+                          selectedColor: MaatriColors.coralLight.withOpacity( 0.4),
                           checkmarkColor: MaatriColors.coral,
                           onSelected: (checked) {
                             setS(() {
@@ -920,7 +920,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                       ChoiceChip(
                         label: Text(m), 
                         selected: mealType == m, 
-                        selectedColor: MaatriColors.tealLight.withValues(alpha: 0.4),
+                        selectedColor: MaatriColors.tealLight.withOpacity( 0.4),
                         onSelected: (_) => setS(() => mealType = m),
                       ),
                     ).toList(),
@@ -1110,7 +1110,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                     ChoiceChip(
                       label: Text(s),
                       selected: status == s,
-                      selectedColor: MaatriColors.tealLight.withValues(alpha: 0.4),
+                      selectedColor: MaatriColors.tealLight.withOpacity( 0.4),
                       onSelected: (_) => setS(() => status = s),
                     ),
                   ).toList(),
@@ -1289,7 +1289,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                     ChoiceChip(
                       label: Text(s),
                       selected: status == s,
-                      selectedColor: MaatriColors.tealLight.withValues(alpha: 0.4),
+                      selectedColor: MaatriColors.tealLight.withOpacity( 0.4),
                       onSelected: (_) => setS(() => status = s),
                     ),
                   ).toList(),

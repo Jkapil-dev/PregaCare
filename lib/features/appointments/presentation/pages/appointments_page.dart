@@ -15,7 +15,7 @@ class AppointmentsPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.event_available_outlined, size: 64, color: MaatriColors.mediumGray.withValues(alpha: 0.5)),
+              Icon(Icons.event_available_outlined, size: 64, color: MaatriColors.mediumGray.withOpacity( 0.5)),
               const SizedBox(height: 16),
               Text(
                 'No appointments scheduled.',

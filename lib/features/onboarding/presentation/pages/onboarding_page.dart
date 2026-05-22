@@ -159,7 +159,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: page.iconColor.withValues(alpha: 0.2),
+                  color: page.iconColor.withOpacity( 0.2),
                   blurRadius: 40,
                   spreadRadius: 10,
                 ),

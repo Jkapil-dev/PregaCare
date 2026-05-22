@@ -52,7 +52,7 @@ class _AiChatPageState extends State<AiChatPage> {
             padding: const EdgeInsets.all(MaatriTheme.spacingMd),
             decoration: BoxDecoration(color: MaatriColors.lavenderLight, borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24))),
             child: Row(children: [
-              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: MaatriColors.lavender.withValues(alpha: 0.5), shape: BoxShape.circle), child: const Icon(Icons.auto_awesome, color: MaatriColors.lavenderDark, size: 24)),
+              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: MaatriColors.lavender.withOpacity( 0.5), shape: BoxShape.circle), child: const Icon(Icons.auto_awesome, color: MaatriColors.lavenderDark, size: 24)),
               const SizedBox(width: 8),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('AI Assistant', style: MaatriTypography.headlineSmall.copyWith(color: MaatriColors.lavenderDark)),
@@ -92,7 +92,7 @@ class _AiChatPageState extends State<AiChatPage> {
           // Input
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: MaatriColors.pureWhite, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))]),
+            decoration: BoxDecoration(color: MaatriColors.pureWhite, boxShadow: [BoxShadow(color: Colors.black.withOpacity( 0.05), blurRadius: 10, offset: const Offset(0, -2))]),
             child: SafeArea(top: false, child: Row(children: [
               Expanded(child: TextField(controller: _msgCtrl, style: MaatriTypography.bodyMedium, decoration: InputDecoration(hintText: 'Ask me anything...', filled: true, fillColor: MaatriColors.cloudGray, border: OutlineInputBorder(borderRadius: BorderRadius.circular(999), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)), onSubmitted: _send)),
               const SizedBox(width: 8),

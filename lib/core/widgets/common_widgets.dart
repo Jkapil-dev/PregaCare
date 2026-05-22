@@ -151,7 +151,7 @@ class QuickActionTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity( 0.12),
                 borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -249,7 +249,7 @@ class ProgressRing extends StatelessWidget {
               strokeWidth: strokeWidth,
               strokeCap: StrokeCap.round,
               backgroundColor: backgroundColor ??
-                  MaatriColors.pureWhite.withValues(alpha: 0.3),
+                  MaatriColors.pureWhite.withOpacity( 0.3),
               color: foregroundColor ?? MaatriColors.pureWhite,
             ),
           ),
@@ -281,7 +281,7 @@ class StatusDot extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.4),
+            color: color.withOpacity( 0.4),
             blurRadius: 4,
           ),
         ],

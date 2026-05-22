@@ -198,7 +198,7 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: MaatriColors.tealLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MaatriColors.tealLight.withOpacity( 0.2), borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.child_friendly_rounded, color: MaatriColors.teal, size: 20),
               ),
               const SizedBox(width: 10),
@@ -288,7 +288,7 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: MaatriColors.coralLight.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MaatriColors.coralLight.withOpacity( 0.15), borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.timer_outlined, color: MaatriColors.coral, size: 20),
               ),
               const SizedBox(width: 10),

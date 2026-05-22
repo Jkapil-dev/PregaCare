@@ -43,7 +43,7 @@ class MaatriBottomNav extends StatelessWidget {
         color: MaatriColors.pureWhite,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Colors.black.withOpacity( 0.06),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -83,7 +83,7 @@ class MaatriBottomNav extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: isActive
             ? BoxDecoration(
-                color: MaatriColors.coral.withValues(alpha: 0.1),
+                color: MaatriColors.coral.withOpacity( 0.1),
                 borderRadius: BorderRadius.circular(MaatriTheme.radiusFull),
               )
             : null,

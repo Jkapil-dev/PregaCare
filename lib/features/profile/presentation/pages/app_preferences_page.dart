@@ -98,7 +98,7 @@ class _AppPreferencesPageState extends State<AppPreferencesPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.deepPurple.withValues(alpha: 0.1),
+                              color: Colors.deepPurple.withOpacity( 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(Icons.dark_mode_outlined, color: Colors.deepPurple),
@@ -119,7 +119,7 @@ class _AppPreferencesPageState extends State<AppPreferencesPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: MaatriColors.teal.withValues(alpha: 0.1),
+                              color: MaatriColors.teal.withOpacity( 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(Icons.translate_rounded, color: MaatriColors.teal),
@@ -153,7 +153,7 @@ class _AppPreferencesPageState extends State<AppPreferencesPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: MaatriColors.coral.withValues(alpha: 0.1),
+                              color: MaatriColors.coral.withOpacity( 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(Icons.straighten_rounded, color: MaatriColors.coral),

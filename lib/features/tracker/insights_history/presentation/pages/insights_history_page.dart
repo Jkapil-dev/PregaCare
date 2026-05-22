@@ -100,7 +100,7 @@ class InsightsHistoryPage extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             fullInsight,
-            style: MaatriTypography.bodyMedium.copyWith(color: Colors.white.withValues(alpha: 0.95), height: 1.4, fontStyle: FontStyle.italic),
+            style: MaatriTypography.bodyMedium.copyWith(color: Colors.white.withOpacity( 0.95), height: 1.4, fontStyle: FontStyle.italic),
           ),
         ],
       ),
@@ -127,7 +127,7 @@ class InsightsHistoryPage extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: MaatriColors.tealLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MaatriColors.tealLight.withOpacity( 0.2), borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.check_circle_rounded, color: MaatriColors.teal, size: 20),
               ),
               const SizedBox(width: 10),
@@ -188,7 +188,7 @@ class InsightsHistoryPage extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: MaatriColors.coralLight.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MaatriColors.coralLight.withOpacity( 0.15), borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.bar_chart_rounded, color: MaatriColors.coral, size: 20),
               ),
               const SizedBox(width: 10),

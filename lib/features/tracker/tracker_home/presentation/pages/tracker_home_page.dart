@@ -173,7 +173,7 @@ class TrackerHomePage extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity( 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
@@ -194,7 +194,7 @@ class TrackerHomePage extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded, color: color.withValues(alpha: 0.8), size: 16),
+            Icon(Icons.arrow_forward_ios_rounded, color: color.withOpacity( 0.8), size: 16),
           ],
         ),
       ),

@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
-import 'package:provider/provider.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/auth/presentation/pages/auth_page.dart';
@@ -13,6 +11,7 @@ import '../../features/ai_assistant/presentation/pages/ai_chat_page.dart';
 import '../../features/community/presentation/pages/community_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/emergency/presentation/pages/emergency_page.dart';
+import '../../features/shared_journey/presentation/pages/shared_journey_page.dart';
 import '../../features/timeline/presentation/pages/timeline_page.dart';
 import '../../features/profile/presentation/pages/personal_info_page.dart';
 import '../../features/profile/presentation/pages/pregnancy_profile_page.dart';
@@ -58,6 +57,7 @@ class AppRoutes {
   static const support = '/support';
   static const babyUpdates = '/baby-updates';
   static const safety = '/safety';
+  static const sharedJourney = '/shared-journey';
 
   // Profile sub-pages routes
   static const personalInfo = '/profile/personal';
@@ -112,24 +112,34 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
       final isOnboarding = location == AppRoutes.onboarding;
       final isAuth = location == AppRoutes.auth;
 
-      // Wait if the providers are fetching initial data
+      // 1. Let SplashPage handle the stable startup animation and transition
+      if (isSplash) return null;
+
+      // 2. Wait if the providers are fetching initial data
       if (authProvider.isLoading || userProvider.isLoading) {
-        if (isSplash) return null;
         return null;
       }
 
-      // If not logged in, redirect any protected route access to /auth
+      // 3. If not logged in, redirect any protected route access to /auth
       if (!isLoggedIn) {
-        if (!isSplash && !isOnboarding && !isAuth) {
+        if (!isOnboarding && !isAuth) {
           debugPrint('GoRouter Redirect: Unauthenticated access to $location. Redirecting to /auth');
           return AppRoutes.auth;
         }
         return null;
       }
 
-      // User is logged in
-      // If user is on public landing pages or auth pages
-      if (isSplash || isOnboarding || isAuth) {
+      // 4. User is logged in but profile document is missing (e.g. failed fetch or deleted document)
+      if (userProvider.profile == null) {
+        if (location != AppRoutes.home) {
+          debugPrint('GoRouter Redirect: Profile missing for $location. Redirecting to /home for security audit.');
+          return AppRoutes.home;
+        }
+        return null;
+      }
+
+      // 5. If user is on public landing pages or auth pages
+      if (isOnboarding || isAuth) {
         if (userProvider.isOnboardingCompleted) {
           debugPrint('GoRouter Redirect: Onboarding complete. Routing to /home');
           return AppRoutes.home;
@@ -139,7 +149,7 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
         }
       }
 
-      // Protect onboarding setup route if already completed onboarding
+      // 6. Protect onboarding setup route if already completed onboarding
       if (location == AppRoutes.pregnancySetup && userProvider.isOnboardingCompleted) {
         debugPrint('GoRouter Redirect: Onboarding already complete. Routing to /home');
         return AppRoutes.home;
@@ -162,6 +172,7 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
             location == AppRoutes.pregnancyProfile ||
             location == AppRoutes.medicalInfo ||
             location == AppRoutes.sharingPermissions ||
+            location == AppRoutes.notificationSharingSettings ||
             location == AppRoutes.aiAssistant ||
             location == AppRoutes.community ||
             location == AppRoutes.pregnancySetup;
@@ -262,6 +273,12 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
             path: AppRoutes.safety,
             pageBuilder: (context, state) => const NoTransitionPage(
               child: EmergencyPage(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.sharedJourney,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SharedJourneyPage(),
             ),
           ),
         ],

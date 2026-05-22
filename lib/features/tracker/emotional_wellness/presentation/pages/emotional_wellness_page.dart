@@ -112,7 +112,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                           ],
                         ),
                         selected: _filterBookmarkedOnly,
-                        selectedColor: MaatriColors.coralLight.withValues(alpha: 0.3),
+                        selectedColor: MaatriColors.coralLight.withOpacity( 0.3),
                         onSelected: (val) {
                           setState(() {
                             _filterBookmarkedOnly = val;
@@ -179,7 +179,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                         padding: const EdgeInsets.all(32.0),
                         child: Column(
                           children: [
-                            Icon(Icons.book_outlined, size: 48, color: MaatriColors.mediumGray.withValues(alpha: 0.5)),
+                            Icon(Icons.book_outlined, size: 48, color: MaatriColors.mediumGray.withOpacity( 0.5)),
                             const SizedBox(height: 8),
                             Text(
                               _filterBookmarkedOnly ? 'No bookmarked memories yet.' : 'Write your first journal entry above!',
@@ -262,7 +262,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: isTodayMood ? MaatriColors.coralLight.withValues(alpha: 0.3) : Colors.transparent,
+                          color: isTodayMood ? MaatriColors.coralLight.withOpacity( 0.3) : Colors.transparent,
                           shape: BoxShape.circle,
                         ),
                         child: Text(mood.$2, style: const TextStyle(fontSize: 32)),
@@ -316,7 +316,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: MaatriColors.tealLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MaatriColors.tealLight.withOpacity( 0.2), borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.self_improvement_rounded, color: MaatriColors.teal, size: 20),
               ),
               const SizedBox(width: 10),
@@ -413,7 +413,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
             Text(
               entry.content.isEmpty ? 'Empty reflection entry. Tap edit to write!' : entry.content,
               style: MaatriTypography.bodyMedium.copyWith(
-                color: entry.content.isEmpty ? MaatriColors.slate.withValues(alpha: 0.6) : MaatriColors.charcoal,
+                color: entry.content.isEmpty ? MaatriColors.slate.withOpacity( 0.6) : MaatriColors.charcoal,
                 fontStyle: entry.content.isEmpty ? FontStyle.italic : FontStyle.normal,
               ),
             ),
@@ -487,7 +487,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                     return ChoiceChip(
                       label: Text('${mood.$2} ${mood.$1}'),
                       selected: active,
-                      selectedColor: MaatriColors.coralLight.withValues(alpha: 0.4),
+                      selectedColor: MaatriColors.coralLight.withOpacity( 0.4),
                       onSelected: (_) => setS(() => selectedMood = itemString),
                     );
                   }).toList(),

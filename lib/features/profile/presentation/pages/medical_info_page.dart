@@ -168,7 +168,7 @@ class _MedicalInfoPageState extends State<MedicalInfoPage> {
                         children: _allergies.map((allergy) {
                           return InputChip(
                             label: Text(allergy, style: MaatriTypography.labelMedium),
-                            backgroundColor: MaatriColors.coral.withValues(alpha: 0.1),
+                            backgroundColor: MaatriColors.coral.withOpacity( 0.1),
                             deleteIconColor: MaatriColors.coral,
                             onDeleted: () => _removeAllergy(allergy),
                           );
@@ -239,7 +239,7 @@ class _MedicalInfoPageState extends State<MedicalInfoPage> {
                         children: _conditions.map((condition) {
                           return InputChip(
                             label: Text(condition, style: MaatriTypography.labelMedium),
-                            backgroundColor: MaatriColors.lavenderDark.withValues(alpha: 0.1),
+                            backgroundColor: MaatriColors.lavenderDark.withOpacity( 0.1),
                             deleteIconColor: MaatriColors.lavenderDark,
                             onDeleted: () => _removeCondition(condition),
                           );

@@ -152,6 +152,21 @@ class _EmergencyOverlayState extends State<EmergencyOverlay> with SingleTickerPr
                         title: 'LIVE GPS LOCATION',
                         icon: Icons.my_location_rounded,
                         accentColor: Colors.blueAccent,
+                        trailing: isLocationLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                                ),
+                              )
+                            : IconButton(
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(Icons.refresh, color: Colors.blueAccent, size: 20),
+                                onPressed: () => emergencyProvider.refreshSOSLocation(context),
+                              ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -205,10 +220,11 @@ class _EmergencyOverlayState extends State<EmergencyOverlay> with SingleTickerPr
                               const Text(
                                 'GPS location not cached yet.',
                                 style: TextStyle(color: Colors.white54, fontSize: 13),
+                                textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 8),
                               OutlinedButton.icon(
-                                onPressed: () => locationProvider.fetchLocation(context),
+                                onPressed: () => emergencyProvider.refreshSOSLocation(context),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.blueAccent,
                                   side: const BorderSide(color: Colors.blueAccent),
@@ -332,6 +348,7 @@ class _EmergencyOverlayState extends State<EmergencyOverlay> with SingleTickerPr
     required IconData icon,
     required Color accentColor,
     required Widget child,
+    Widget? trailing,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -347,15 +364,18 @@ class _EmergencyOverlayState extends State<EmergencyOverlay> with SingleTickerPr
             children: [
               Icon(icon, color: accentColor, size: 20),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  color: accentColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: accentColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                  ),
                 ),
               ),
+              if (trailing != null) trailing,
             ],
           ),
           const Divider(color: Colors.white10, height: 20),

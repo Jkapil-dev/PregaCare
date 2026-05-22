@@ -1,6 +1,10 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
@@ -12,6 +16,7 @@ import '../../../../core/providers/user_provider.dart';
 import '../../../../core/models/emergency_contact.dart';
 import '../../../../core/models/medical_emergency_info.dart';
 import '../../../../core/models/hospital.dart';
+
 
 class EmergencyPage extends StatefulWidget {
   const EmergencyPage({super.key});
@@ -246,6 +251,11 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
   Widget build(BuildContext context) {
     final emp = Provider.of<EmergencyProvider>(context);
     final loc = Provider.of<LocationProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context);
+
+    if (userProvider.isPartner) {
+      return _buildPartnerEmergencyDashboard(context, emp, loc, userProvider);
+    }
 
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
@@ -338,7 +348,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                           height: 165 * _pulseScaleAnimation.value,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: MaatriColors.danger.withValues(alpha: _pulseOpacityAnimation.value),
+                            color: MaatriColors.danger.withOpacity( _pulseOpacityAnimation.value),
                           ),
                         );
                       },
@@ -353,7 +363,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                     value: _holdProgress,
                     strokeWidth: 8,
                     strokeCap: StrokeCap.round,
-                    backgroundColor: MaatriColors.dangerLight.withValues(alpha: 0.4),
+                    backgroundColor: MaatriColors.dangerLight.withOpacity( 0.4),
                     valueColor: const AlwaysStoppedAnimation<Color>(MaatriColors.dangerDark),
                   ),
                 ),
@@ -377,7 +387,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                           color: _isHolding ? MaatriColors.dangerDark : MaatriColors.danger,
                           boxShadow: [
                             BoxShadow(
-                              color: MaatriColors.danger.withValues(alpha: _isHolding ? 0.6 : (0.4 - 0.15 * _pulseController.value)),
+                              color: MaatriColors.danger.withOpacity( _isHolding ? 0.6 : (0.4 - 0.15 * _pulseController.value)),
                               blurRadius: shadowBlur,
                               spreadRadius: shadowSpread,
                             ),
@@ -833,7 +843,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isSaved ? MaatriColors.tealLight.withValues(alpha: 0.4) : MaatriColors.cloudGray,
+                  color: isSaved ? MaatriColors.tealLight.withOpacity( 0.4) : MaatriColors.cloudGray,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.local_hospital_rounded, color: isSaved ? MaatriColors.tealDark : MaatriColors.mediumGray, size: 20),
@@ -1407,6 +1417,901 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
       },
     );
   }
+
+  // ==========================================
+  // PARTNER EMERGENCY DASHBOARD IMPLEMENTATION
+  // ==========================================
+
+  Widget _buildPartnerEmergencyDashboard(
+    BuildContext context,
+    EmergencyProvider emp,
+    LocationProvider loc,
+    UserProvider userProvider,
+  ) {
+    final connectionState = emp.connectionEmergencyState;
+    final isSos = connectionState != null && connectionState['active'] == true;
+    final motherName = userProvider.motherProfile?['displayName'] ?? 'Mother';
+    final motherPhone = userProvider.motherProfile?['phoneNumber'] ?? '';
+
+    // Extracted medical summary properties
+    final gestAge = "Week ${userProvider.pregnancyWeek}";
+    final trimesterNum = "Trimester ${userProvider.trimester}";
+    final riskLevel = emp.medicalInfo.pregnancyRiskLevel;
+    final bloodGrp = emp.medicalInfo.bloodGroup.isNotEmpty ? emp.medicalInfo.bloodGroup : 'Not Specified';
+    final allergiesText = emp.medicalInfo.allergies.isNotEmpty ? emp.medicalInfo.allergies : 'None recorded';
+    final conditionsText = emp.medicalInfo.chronicConditions.isNotEmpty ? emp.medicalInfo.chronicConditions : 'None';
+    final doctorName = emp.medicalInfo.doctorName.isNotEmpty ? "Dr. ${emp.medicalInfo.doctorName}" : 'Not Specified';
+    final prefHospital = emp.medicalInfo.hospitalName.isNotEmpty ? emp.medicalInfo.hospitalName : 'Not Specified';
+
+    return Scaffold(
+      backgroundColor: MaatriColors.warmCream,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Row(
+          children: [
+            const Icon(Icons.shield_outlined, color: MaatriColors.danger),
+            const SizedBox(width: 8),
+            Text('Partner Emergency Hub', style: MaatriTypography.headlineMedium.copyWith(color: MaatriColors.charcoal)),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: MaatriColors.darkGray),
+            onPressed: () => emp.loadAllEmergencyData(),
+          )
+        ],
+      ),
+      body: SingleChildScrollView(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: MaatriTheme.spacingMd, vertical: MaatriTheme.spacingSm),
+        child: Column(
+          children: [
+            // 1. GLOWING STATUS HEADER
+            _buildPartnerGlowingStatusHeader(isSos, motherName),
+            const SizedBox(height: MaatriTheme.spacingLg),
+
+            // 2. ACTIVE EMERGENCY DETAILS PANEL (If active)
+            if (isSos) ...[
+              _buildActiveEmergencyDetailsPanel(context, emp, loc, connectionState, motherName),
+              const SizedBox(height: MaatriTheme.spacingLg),
+              _buildEmergencyQuickActionsHub(context, emp, connectionState, motherPhone),
+              const SizedBox(height: MaatriTheme.spacingLg),
+            ] else ...[
+              // 3. QUICK ACTIONS GRID
+              _buildPartnerQuickActionsGrid(context, emp, motherPhone),
+              const SizedBox(height: MaatriTheme.spacingLg),
+            ],
+
+            // 4. MATERNAL MEDICAL SUMMARY CARD
+            _buildMaternalMedicalSummaryCard(
+              gestAge,
+              trimesterNum,
+              riskLevel,
+              bloodGrp,
+              allergiesText,
+              conditionsText,
+              doctorName,
+              prefHospital,
+            ),
+            const SizedBox(height: MaatriTheme.spacingLg),
+
+            // 5. SAVED HOSPITALS & DIRECTIONS (reuses existing build block)
+            _buildHospitalsBlock(emp),
+            const SizedBox(height: MaatriTheme.spacingLg),
+
+            // 6. EMERGENCY ACTIVITY TIMELINE
+            _buildEmergencyActivityTimeline(connectionState, isSos),
+            const SizedBox(height: MaatriTheme.spacingXl),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPartnerGlowingStatusHeader(bool isSos, String motherName) {
+    final gradient = isSos
+        ? const LinearGradient(
+            colors: [Color(0xFFEF5350), Color(0xFFC62828)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : const LinearGradient(
+            colors: [Color(0xFF26A69A), Color(0xFF00695C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
+
+    final shadow = isSos ? MaatriTheme.glowCoral : MaatriTheme.glowTeal;
+
+    return GlassCard(
+      gradient: gradient,
+      boxShadow: shadow,
+      padding: const EdgeInsets.all(MaatriTheme.spacingLg),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: Colors.white24,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isSos ? Icons.warning_amber_rounded : Icons.favorite_rounded,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isSos ? 'CRITICAL EMERGENCY' : 'Mother is Safe',
+                  style: MaatriTypography.titleMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isSos
+                      ? '$motherName triggered an SOS alert!'
+                      : 'Synced to $motherName\'s real-time safety network.',
+                  style: MaatriTypography.bodyMedium.copyWith(
+                    color: Colors.white.withOpacity( 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveEmergencyDetailsPanel(
+    BuildContext context,
+    EmergencyProvider emp,
+    LocationProvider loc,
+    Map<String, dynamic> connectionState,
+    String motherName,
+  ) {
+    final triggeredAt = connectionState['triggeredAt'];
+    String timeStr = 'Just now';
+    if (triggeredAt is Timestamp) {
+      final dt = triggeredAt.toDate();
+      timeStr = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    }
+
+    final geoPoint = connectionState['location'] as GeoPoint?;
+    final lat = geoPoint?.latitude;
+    final lng = geoPoint?.longitude;
+
+    double? distanceInMeters;
+    String distanceStr = '';
+    if (lat != null && lng != null && loc.currentPosition != null) {
+      try {
+        distanceInMeters = Geolocator.distanceBetween(
+          loc.currentPosition!.latitude,
+          loc.currentPosition!.longitude,
+          lat,
+          lng,
+        );
+        if (distanceInMeters < 1000) {
+          distanceStr = "${distanceInMeters.toStringAsFixed(0)} meters away";
+        } else {
+          distanceStr = "${(distanceInMeters / 1000).toStringAsFixed(2)} km away";
+        }
+      } catch (e) {
+        debugPrint('Error calculating distance: $e');
+      }
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.all(MaatriTheme.spacingLg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const StatusDot(color: MaatriColors.danger, size: 12),
+              const SizedBox(width: 8),
+              Text(
+                'SOS DETAILS',
+                style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.dangerDark, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: MaatriColors.dangerLight,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Triggered at $timeStr',
+                  style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.dangerDark, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Radar pulse ring map preview mockup block
+          Container(
+            height: 140,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(MaatriTheme.radiusLg),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.teal.withOpacity(0.08),
+                  Colors.blue.withOpacity(0.08),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: Colors.teal.withOpacity(0.2)),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Pulsing live radar rings
+                _RadarPulseRing(delay: 0),
+                _RadarPulseRing(delay: 1),
+                _RadarPulseRing(delay: 2),
+                // Pulse pin
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.my_location_rounded, color: MaatriColors.teal, size: 28),
+                    const SizedBox(height: 4),
+                    Text(
+                      'LIVE TRACKING ACTIVE',
+                      style: TextStyle(
+                        color: MaatriColors.tealDark,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'GPS TRACKING AND COORDINATES',
+                style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate, fontWeight: FontWeight.bold),
+              ),
+              if (lat != null && lng != null) ...[
+                if (distanceStr.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: MaatriColors.tealLight,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: MaatriColors.teal.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.directions_walk_rounded, color: MaatriColors.tealDark, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          distanceStr,
+                          style: MaatriTypography.labelMedium.copyWith(
+                            color: MaatriColors.tealDark,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: loc.isLoading
+                        ? null
+                        : () async {
+                            await loc.fetchLocation(context);
+                          },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: MaatriColors.tealDark,
+                      side: const BorderSide(color: MaatriColors.teal, width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    icon: loc.isLoading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: MaatriColors.tealDark),
+                          )
+                        : const Icon(Icons.my_location_rounded, size: 14),
+                    label: const Text('CALCULATE DISTANCE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (lat != null && lng != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: MaatriColors.warmCream,
+                borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
+                border: Border.all(color: MaatriColors.lightGray),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on_rounded, color: MaatriColors.teal),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Latitude: $lat\nLongitude: $lng',
+                      style: MaatriTypography.bodyMedium.copyWith(fontFamily: 'monospace', fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: MaatriColors.warmCream,
+                borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: MaatriColors.danger),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Waiting for precise GPS coordinates...',
+                    style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () => _showResolveEmergencyDialog(context, emp),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: MaatriColors.successDark,
+                side: const BorderSide(color: MaatriColors.successDark, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MaatriTheme.radiusMd)),
+              ),
+              icon: const Icon(Icons.check_circle_outline_rounded),
+              label: const Text('MARK SOS AS RESOLVED', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResolveEmergencyDialog(BuildContext context, EmergencyProvider emp) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Resolve Emergency?'),
+          content: const Text('This will clear the SOS alert status for both Mother and Partner. Confirm if the emergency is resolved and safe.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: MaatriColors.charcoal)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await emp.resolveEmergency();
+                if (context.mounted) Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.successDark),
+              child: const Text('Yes, Resolved', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPartnerQuickActionsGrid(
+    BuildContext context,
+    EmergencyProvider emp,
+    String motherPhone,
+  ) {
+    final primaryContact = emp.contacts.firstWhere(
+      (c) => c.priority == 1 && c.emergencyEnabled,
+      orElse: () => emp.contacts.isNotEmpty ? emp.contacts.first : const EmergencyContact(id: '', name: '', phone: '', relationship: ''),
+    );
+
+    final obgynContact = emp.contacts.firstWhere(
+      (c) => c.relationship.toLowerCase() == 'ob-gyn' || c.relationship.toLowerCase() == 'doctor',
+      orElse: () => const EmergencyContact(id: '', name: '', phone: '', relationship: ''),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Dialer Center',
+          style: MaatriTypography.headlineSmall.copyWith(fontSize: 18),
+        ),
+        const SizedBox(height: 8),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.35,
+          children: [
+            // CALL MOTHER
+            _buildDialerCard(
+              title: 'Call Mother',
+              subtitle: motherPhone.isNotEmpty ? motherPhone : 'Not Set',
+              icon: Icons.person_rounded,
+              color: MaatriColors.teal,
+              onTap: motherPhone.isNotEmpty
+                  ? () => launchUrl(Uri.parse('tel:$motherPhone'))
+                  : null,
+            ),
+            // CALL PRIMARY CONTACT
+            _buildDialerCard(
+              title: primaryContact.name.isNotEmpty ? 'Primary Contact' : 'Primary SOS',
+              subtitle: primaryContact.phone.isNotEmpty ? primaryContact.name : 'Not Added',
+              icon: Icons.contact_emergency_rounded,
+              color: MaatriColors.coral,
+              onTap: primaryContact.phone.isNotEmpty
+                  ? () => launchUrl(Uri.parse('tel:${primaryContact.phone}'))
+                  : null,
+            ),
+            // CALL OB-GYN
+            _buildDialerCard(
+              title: 'OB-GYN Doctor',
+              subtitle: obgynContact.name.isNotEmpty
+                  ? obgynContact.name
+                  : (emp.medicalInfo.doctorName.isNotEmpty ? "Dr. ${emp.medicalInfo.doctorName}" : 'Not Added'),
+              icon: Icons.medication_rounded,
+              color: MaatriColors.lavenderDark,
+              onTap: obgynContact.phone.isNotEmpty
+                  ? () => launchUrl(Uri.parse('tel:${obgynContact.phone}'))
+                  : null,
+            ),
+            // CALL AMBULANCE (108)
+            _buildDialerCard(
+              title: 'Ambulance',
+              subtitle: 'Local ER (108)',
+              icon: Icons.airport_shuttle_rounded,
+              color: MaatriColors.danger,
+              onTap: () => launchUrl(Uri.parse('tel:108')),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmergencyQuickActionsHub(
+    BuildContext context,
+    EmergencyProvider emp,
+    Map<String, dynamic> connectionState,
+    String motherPhone,
+  ) {
+    final geoPoint = connectionState['location'] as GeoPoint?;
+    final lat = geoPoint?.latitude;
+    final lng = geoPoint?.longitude;
+    final isLocationAvailable = lat != null && lng != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Emergency Actions Hub',
+          style: MaatriTypography.headlineSmall.copyWith(fontSize: 18, color: MaatriColors.dangerDark, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.35,
+          children: [
+            // 1. NAVIGATE NOW
+            _buildDialerCard(
+              title: 'Navigate Now',
+              subtitle: 'Start routing to Mother',
+              icon: Icons.navigation_rounded,
+              color: MaatriColors.teal,
+              onTap: isLocationAvailable
+                  ? () => launchUrl(Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng'), mode: LaunchMode.externalApplication)
+                  : null,
+            ),
+            // 2. OPEN IN MAPS
+            _buildDialerCard(
+              title: 'Open in Maps',
+              subtitle: 'View pin on Google Maps',
+              icon: Icons.map_rounded,
+              color: Colors.blue,
+              onTap: isLocationAvailable
+                  ? () => launchUrl(Uri.parse('https://maps.google.com/?q=$lat,$lng'), mode: LaunchMode.externalApplication)
+                  : null,
+            ),
+            // 3. COPY COORDINATES
+            _buildDialerCard(
+              title: 'Copy Coordinates',
+              subtitle: isLocationAvailable ? '$lat, $lng' : 'Unavailable',
+              icon: Icons.copy_rounded,
+              color: Colors.orange,
+              onTap: isLocationAvailable
+                  ? () async {
+                      await Clipboard.setData(ClipboardData(text: '$lat, $lng'));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('GPS coordinates copied to clipboard'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  : null,
+            ),
+            // 4. SHARE ALERT
+            _buildDialerCard(
+              title: 'Share Location',
+              subtitle: 'Send SMS/WhatsApp alert',
+              icon: Icons.share_rounded,
+              color: Colors.purple,
+              onTap: isLocationAvailable
+                  ? () {
+                      final motherName = emp.connectionEmergencyState?['triggeredBy'] ?? 'Mother';
+                      Share.share(
+                        'CRITICAL EMERGENCY: Maternal SOS triggered by Mother ($motherName). '
+                        'Live GPS location: https://maps.google.com/?q=$lat,$lng'
+                      );
+                    }
+                  : null,
+            ),
+            // 5. CALL AMBULANCE
+            _buildDialerCard(
+              title: 'Call Ambulance',
+              subtitle: 'Dial local ER (108)',
+              icon: Icons.airport_shuttle_rounded,
+              color: MaatriColors.danger,
+              onTap: () => launchUrl(Uri.parse('tel:108')),
+            ),
+            // 6. CALL MOTHER
+            _buildDialerCard(
+              title: 'Call Mother',
+              subtitle: motherPhone.isNotEmpty ? motherPhone : 'Not Added',
+              icon: Icons.person_rounded,
+              color: Colors.green,
+              onTap: motherPhone.isNotEmpty
+                  ? () => launchUrl(Uri.parse('tel:$motherPhone'))
+                  : null,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDialerCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    final isEnabled = onTap != null;
+
+    return GlassCard(
+      padding: const EdgeInsets.all(12),
+      onTap: onTap,
+      backgroundColor: isEnabled ? Colors.white : Colors.white.withOpacity( 0.5),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity( 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const Spacer(),
+              if (isEnabled)
+                const Icon(Icons.phone_forwarded_rounded, color: MaatriColors.mediumGray, size: 16),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            title,
+            style: MaatriTypography.titleSmall.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: isEnabled ? MaatriColors.charcoal : MaatriColors.slate,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: MaatriTypography.bodySmall.copyWith(
+              color: MaatriColors.slate,
+              fontSize: 11,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMaternalMedicalSummaryCard(
+    String gestAge,
+    String trimester,
+    String riskLevel,
+    String bloodGrp,
+    String allergies,
+    String conditions,
+    String doctorName,
+    String prefHospital,
+  ) {
+    final riskColor = riskLevel == 'High'
+        ? MaatriColors.danger
+        : riskLevel == 'Medium'
+            ? MaatriColors.warningDark
+            : MaatriColors.successDark;
+
+    return GlassCard(
+      padding: const EdgeInsets.all(MaatriTheme.spacingLg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.assignment_ind_rounded, color: MaatriColors.teal, size: 22),
+              const SizedBox(width: 8),
+              Text('Maternal Medical Summary', style: MaatriTypography.headlineSmall),
+            ],
+          ),
+          const Divider(height: 24, color: MaatriColors.lightGray),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSummaryItem('Gestational Age', gestAge),
+              ),
+              Expanded(
+                child: _buildSummaryItem('Trimester Stage', trimester),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSummaryItem('Blood Group', bloodGrp, valueColor: MaatriColors.dangerDark, isBoldValue: true),
+              ),
+              Expanded(
+                child: _buildSummaryItem('Pregnancy Risk', riskLevel, valueColor: riskColor, isBoldValue: true),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryFullWidthItem('Allergies', allergies),
+          const SizedBox(height: 10),
+          _buildSummaryFullWidthItem('Chronic Conditions', conditions),
+          const SizedBox(height: 10),
+          _buildSummaryFullWidthItem('Primary OB-GYN', doctorName),
+          const SizedBox(height: 10),
+          _buildSummaryFullWidthItem('Preferred Hospital', prefHospital),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, {Color? valueColor, bool isBoldValue = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: MaatriTypography.bodyMedium.copyWith(
+            fontWeight: isBoldValue ? FontWeight.bold : FontWeight.normal,
+            color: valueColor ?? MaatriColors.charcoal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryFullWidthItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.charcoal),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmergencyActivityTimeline(Map<String, dynamic>? connectionState, bool isSos) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Emergency Activity Timeline',
+          style: MaatriTypography.headlineSmall.copyWith(fontSize: 18),
+        ),
+        const SizedBox(height: 8),
+        GlassCard(
+          padding: const EdgeInsets.all(MaatriTheme.spacingLg),
+          child: isSos
+              ? Column(
+                  children: [
+                    _buildTimelineStep(
+                      title: 'SOS Alert Triggered',
+                      subtitle: 'Alert dispatched from Mother\'s device',
+                      time: _getFormattedTime(connectionState?['triggeredAt']),
+                      isCompleted: true,
+                      isLast: false,
+                    ),
+                    _buildTimelineStep(
+                      title: 'GPS Coordinates Captured',
+                      subtitle: connectionState?['location'] != null
+                          ? 'Precise coordinate logs saved dynamically'
+                          : 'Capturing active coordinates...',
+                      time: connectionState?['location'] != null ? 'Captured' : 'Pending',
+                      isCompleted: connectionState?['location'] != null,
+                      isLast: false,
+                    ),
+                    _buildTimelineStep(
+                      title: 'Partner Notified',
+                      subtitle: 'Push alert and haptic sirens initiated',
+                      time: 'Active',
+                      isCompleted: true,
+                      isLast: false,
+                    ),
+                    _buildTimelineStep(
+                      title: 'Pending Safe Resolution',
+                      subtitle: 'Awaiting confirmation of safety status',
+                      time: '--:--',
+                      isCompleted: false,
+                      isLast: true,
+                    ),
+                  ],
+                )
+              : Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.check_circle_outline_rounded, color: MaatriColors.successDark, size: 36),
+                        const SizedBox(height: 8),
+                        Text(
+                          'All Systems Normal',
+                          style: MaatriTypography.titleSmall.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'No emergency alerts triggered.',
+                          style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  String _getFormattedTime(dynamic timestamp) {
+    if (timestamp is Timestamp) {
+      final dt = timestamp.toDate();
+      return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    }
+    return '--:--';
+  }
+
+  Widget _buildTimelineStep({
+    required String title,
+    required String subtitle,
+    required String time,
+    required bool isCompleted,
+    required bool isLast,
+  }) {
+    final activeColor = isCompleted ? MaatriColors.teal : MaatriColors.mediumGray;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: isCompleted ? activeColor : Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: activeColor, width: 2),
+              ),
+              child: isCompleted
+                  ? const Icon(Icons.check, size: 10, color: Colors.white)
+                  : null,
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 40,
+                color: activeColor.withOpacity( 0.5),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: MaatriTypography.titleSmall.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: isCompleted ? MaatriColors.charcoal : MaatriColors.slate,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate, fontSize: 11),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+        Text(
+          time,
+          style: MaatriTypography.labelSmall.copyWith(
+            color: isCompleted ? MaatriColors.tealDark : MaatriColors.slate,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _SOSSheetOptionTile extends StatelessWidget {
@@ -1437,14 +2342,14 @@ class _SOSSheetOptionTile extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
           boxShadow: MaatriTheme.shadowSm,
-          border: Border.all(color: color.withValues(alpha: 0.15), width: 1.5),
+          border: Border.all(color: color.withOpacity( 0.15), width: 1.5),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity( 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
@@ -1464,6 +2369,69 @@ class _SOSSheetOptionTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RadarPulseRing extends StatefulWidget {
+  final int delay;
+  const _RadarPulseRing({required this.delay});
+
+  @override
+  State<_RadarPulseRing> createState() => _RadarPulseRingState();
+}
+
+class _RadarPulseRingState extends State<_RadarPulseRing> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scale;
+  late Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+
+    _scale = Tween<double>(begin: 0.1, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _opacity = Tween<double>(begin: 0.8, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    Future.delayed(Duration(seconds: widget.delay), () {
+      if (mounted) {
+        _controller.repeat();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        if (!_controller.isAnimating) return const SizedBox.shrink();
+        return Container(
+          width: 140 * _scale.value,
+          height: 140 * _scale.value,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: MaatriColors.teal.withOpacity(_opacity.value),
+              width: 2,
+            ),
+          ),
+        );
+      },
     );
   }
 }

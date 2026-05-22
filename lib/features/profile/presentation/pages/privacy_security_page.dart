@@ -200,7 +200,7 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: MaatriColors.coral.withValues(alpha: 0.1),
+                              color: MaatriColors.coral.withOpacity( 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(Icons.lock_reset_rounded, color: MaatriColors.coral),
@@ -216,7 +216,7 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: MaatriColors.lavenderDark.withValues(alpha: 0.1),
+                              color: MaatriColors.lavenderDark.withOpacity( 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(Icons.logout_rounded, color: MaatriColors.lavenderDark),
@@ -272,7 +272,7 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: MaatriColors.danger.withValues(alpha: 0.1),
+                          color: MaatriColors.danger.withOpacity( 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.delete_forever_rounded, color: MaatriColors.danger),

@@ -121,6 +121,12 @@ service cloud.firestore {
       );
       
       allow delete: if signedIn() && resource.data.motherUid == request.auth.uid;
+
+      match /emergency_state/{docId} {
+        allow read, write: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.linkedUsers;
+      }
     }
   }
 }

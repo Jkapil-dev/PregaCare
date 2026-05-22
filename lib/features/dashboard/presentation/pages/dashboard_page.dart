@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +9,9 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/providers/connection_provider.dart';
+import '../../../../providers/auth_provider.dart';
+
 
 /// Home Dashboard - the main hub of MaatriCare
 import 'package:provider/provider.dart';
@@ -30,6 +34,9 @@ class DashboardPage extends StatelessWidget {
     final isPartner = userProvider.role == 'partner';
 
     if (isPartner) {
+      if (!userProvider.isLinked) {
+        return _UnlinkedPartnerView(userProvider: userProvider);
+      }
       return _buildPartnerDashboard(context, userProvider);
     } else {
       return _buildMotherDashboard(context, userProvider);
@@ -312,6 +319,10 @@ class DashboardPage extends StatelessWidget {
               _buildPartnerSosBanner(context, userProvider, motherName),
               _buildPartnerGreeting(context, displayName, motherName),
               const SizedBox(height: MaatriTheme.spacingLg),
+              if (!userProvider.isLinked) ...[
+                _buildUnlinkedConnectionBanner(context),
+                const SizedBox(height: MaatriTheme.spacingLg),
+              ],
               _buildPartnerWeekCard(context, userProvider, sharedPregnancy),
               const SizedBox(height: MaatriTheme.spacingMd),
               _buildPartnerAppointmentCard(context, userProvider, apptProvider.nextAppointment),
@@ -320,10 +331,97 @@ class DashboardPage extends StatelessWidget {
               const SizedBox(height: MaatriTheme.spacingLg),
               _buildPartnerSupportSuggestions(context, trimester),
               const SizedBox(height: MaatriTheme.spacingLg),
+              // New sections for emotional support ecosystem
+              _buildBabyDevelopmentSpotlight(context, sharedPregnancy),
+              const SizedBox(height: MaatriTheme.spacingLg),
+              _buildHowCanIHelpToday(context, sharedPregnancy),
+              const SizedBox(height: MaatriTheme.spacingLg),
+              _buildSharedMilestones(context, sharedPregnancy),
+              const SizedBox(height: MaatriTheme.spacingLg),
               _buildPartnerEmergencyStatus(context, userProvider),
               const SizedBox(height: MaatriTheme.spacingXl),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnlinkedConnectionBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: MaatriColors.tealGradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: MaatriTheme.shadowMd,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.link_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Awaiting Connection',
+                    style: MaatriTypography.titleLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Connect your partner account with your partner\'s MaatriCare profile to begin syncing pregnancy progress, shared medication schedules, and real-time SOS safety alerts.',
+              style: MaatriTypography.bodyMedium.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  context.push(AppRoutes.partnerFamily);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: MaatriColors.tealDark,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                label: const Text(
+                  'LINK ACCOUNT NOW',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -353,135 +451,162 @@ class DashboardPage extends StatelessWidget {
     final lng = motherProfile?['sosLongitude'];
     final phone = motherProfile?['phoneNumber'] ?? '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: MaatriTheme.spacingLg),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFE57373), Color(0xFFD32F2F)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return GestureDetector(
+      onTap: () => context.go(AppRoutes.safety),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: MaatriTheme.spacingLg),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFE57373), Color(0xFFD32F2F)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: MaatriTheme.shadowMd,
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: MaatriTheme.shadowMd,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(8),
+        child: Material(
+          color: Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'CRITICAL SOS ALERT',
-                          style: MaatriTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (timeStr.isNotEmpty)
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            'Active since $timeStr',
-                            style: MaatriTypography.labelSmall.copyWith(
-                              color: Colors.white70,
+                            'CRITICAL SOS ALERT',
+                            style: MaatriTypography.titleMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                      ],
+                          if (timeStr.isNotEmpty)
+                            Text(
+                              'Active since $timeStr',
+                              style: MaatriTypography.labelSmall.copyWith(
+                                color: Colors.white70,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '$motherName triggered an emergency alert. Reach out immediately or use maps directions below.',
+                  style: MaatriTypography.bodyMedium.copyWith(
+                    color: Colors.white.withValues(alpha: 0.95),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => context.go(AppRoutes.safety),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFFD32F2F),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                    icon: const Icon(Icons.shield_rounded, size: 20),
+                    label: Text(
+                      'EMERGENCY DASHBOARD',
+                      style: MaatriTypography.labelLarge.copyWith(
+                        color: const Color(0xFFD32F2F),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1,
+                      ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '$motherName triggered an emergency alert. Reach out immediately or use maps directions below.',
-                style: MaatriTypography.bodyMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  height: 1.4,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  if (phone.isNotEmpty) ...[
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final Uri url = Uri.parse('tel:$phone');
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url);
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white70),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (phone.isNotEmpty) ...[
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final Uri url = Uri.parse('tel:$phone');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url);
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                        ),
-                        icon: const Icon(Icons.phone_rounded, size: 16),
-                        label: Text(
-                          'CALL NOW',
-                          style: MaatriTypography.labelMedium.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  if (lat != null && lng != null) ...[
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final Uri url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url, mode: LaunchMode.externalApplication);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFFD32F2F),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                        ),
-                        icon: const Icon(Icons.directions_rounded, size: 16),
-                        label: Text(
-                          'DIRECTIONS',
-                          style: MaatriTypography.labelMedium.copyWith(
-                            color: const Color(0xFFD32F2F),
-                            fontWeight: FontWeight.bold,
+                          icon: const Icon(Icons.phone_rounded, size: 16),
+                          label: Text(
+                            'CALL NOW',
+                            style: MaatriTypography.labelMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (lat != null && lng != null) ...[
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final Uri url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          icon: const Icon(Icons.directions_rounded, size: 16),
+                          label: Text(
+                            'DIRECTIONS',
+                            style: MaatriTypography.labelMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -790,6 +915,9 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // NEW COMPONENTS FOR PARTNER EMOTIONAL SUPPORT
+  // ---------------------------------------------------------------------------
   Widget _buildPartnerSupportSuggestions(BuildContext context, int trimester) {
     final Map<int, List<Map<String, String>>> recommendations = {
       1: [
@@ -932,6 +1060,148 @@ class DashboardPage extends StatelessWidget {
       ],
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // WIDGETS FOR PARTNER EMOTIONAL SUPPORT
+  // ---------------------------------------------------------------------------
+
+  Widget _buildBabyDevelopmentSpotlight(BuildContext context, SharedPregnancyProvider sharedPregnancy) {
+    final narrative = sharedPregnancy.weeklyDevelopmentNarrative;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Baby Development Spotlight',
+          icon: Icons.baby_changing_station_rounded,
+          iconColor: MaatriColors.coral,
+        ),
+        const SizedBox(height: MaatriTheme.spacingSm),
+        GlassCard(
+          padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+          child: Text(
+            narrative.isNotEmpty ? narrative : 'Your baby is growing beautifully. Stay tuned for weekly updates.',
+            style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.charcoal),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHowCanIHelpToday(BuildContext context, SharedPregnancyProvider sharedPregnancy) {
+    final suggestions = sharedPregnancy.dailyHelpSuggestions;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'How can I help today?',
+          icon: Icons.help_center_rounded,
+          iconColor: MaatriColors.teal,
+        ),
+        const SizedBox(height: MaatriTheme.spacingSm),
+        ...suggestions.take(3).map((s) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: GlassCard(
+              padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: MaatriColors.teal.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.lightbulb_rounded, color: MaatriColors.teal, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s['title'] ?? '',
+                          style: MaatriTypography.titleSmall.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          s['desc'] ?? '',
+                          style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildSharedMilestones(BuildContext context, SharedPregnancyProvider sharedPregnancy) {
+    final milestones = sharedPregnancy.sharedMilestones;
+    if (milestones.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Shared Milestones',
+          icon: Icons.emoji_events_rounded,
+          iconColor: MaatriColors.goldenAmber,
+        ),
+        const SizedBox(height: MaatriTheme.spacingSm),
+        GlassCard(
+          padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+          child: Column(
+            children: milestones.take(5).map((m) {
+              final bool achieved = m['achieved'] as bool? ?? false;
+              final String emoji = m['emoji'] as String? ?? '🌟';
+              final String title = m['title'] as String? ?? '';
+              final int week = m['week'] as int? ?? 0;
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 20)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: MaatriTypography.titleSmall.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: achieved ? MaatriColors.charcoal : MaatriColors.mediumGray,
+                            ),
+                          ),
+                          Text(
+                            'Week $week',
+                            style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      achieved ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      color: achieved ? MaatriColors.teal : MaatriColors.lightGray,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _LockedFeatureCard extends StatelessWidget {
@@ -966,6 +1236,370 @@ class _LockedFeatureCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _UnlinkedPartnerView extends StatefulWidget {
+  final UserProvider userProvider;
+  const _UnlinkedPartnerView({required this.userProvider});
+
+  @override
+  State<_UnlinkedPartnerView> createState() => _UnlinkedPartnerViewState();
+}
+
+class _UnlinkedPartnerViewState extends State<_UnlinkedPartnerView> {
+  final _formKey = GlobalKey<FormState>();
+  final _codeController = TextEditingController();
+  bool _isProcessing = false;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? MaatriColors.danger : MaatriColors.teal,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _handleJoinConnection() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isProcessing = true);
+    final code = _codeController.text.trim().toUpperCase();
+    try {
+      await context.read<ConnectionProvider>().joinConnection(code, widget.userProvider.uid);
+      _showSnackBar('Successfully linked to pregnancy!');
+    } catch (e) {
+      _showSnackBar(e.toString().replaceAll('Exception: ', ''), isError: true);
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _handleSignOut() async {
+    final authProvider = context.read<AuthProvider>();
+    try {
+      await authProvider.logout();
+    } catch (e) {
+      _showSnackBar('Error signing out. Please try again.', isError: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: MaatriColors.warmCream,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 20),
+                  // Welcome Header
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: MaatriColors.teal.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.handshake_rounded,
+                        color: MaatriColors.teal,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Text(
+                      'Welcome to MaatriCare',
+                      style: MaatriTypography.headlineLarge.copyWith(
+                        color: MaatriColors.charcoal,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: Text(
+                      'COMPANION ONBOARDING',
+                      style: MaatriTypography.labelMedium.copyWith(
+                        color: MaatriColors.tealDark,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Text(
+                        'Connect your partner account with the mother\'s MaatriCare profile to start syncing and supporting her pregnancy journey in real time.',
+                        textAlign: TextAlign.center,
+                        style: MaatriTypography.bodyMedium.copyWith(
+                          color: MaatriColors.slate,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Elegant Benefits Title
+                  Text(
+                    'What you can do together:',
+                    style: MaatriTypography.titleMedium.copyWith(
+                      color: MaatriColors.charcoal,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Premium feature list using GlassCards
+                  _buildBenefitCard(
+                    icon: Icons.child_care_rounded,
+                    iconColor: MaatriColors.teal,
+                    title: 'Sync Pregnancy Milestones',
+                    description: 'Track baby\'s weekly development stats, estimated weight, length, and size changes.',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBenefitCard(
+                    icon: Icons.medication_rounded,
+                    iconColor: MaatriColors.coral,
+                    title: 'Shared Reminders',
+                    description: 'Stay aware of prenatal vitamins, active prescriptions, and OB-GYN checkups.',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBenefitCard(
+                    icon: Icons.shield_rounded,
+                    iconColor: MaatriColors.danger,
+                    title: 'Real-time Emergency Alerts',
+                    description: 'Receive instant SOS alarms, directions, and critical health vitals if assistance is needed.',
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Connection Form Section
+                  GlassCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.vpn_key_rounded,
+                                color: MaatriColors.tealDark,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Enter Pregnancy Code',
+                                style: MaatriTypography.titleMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: MaatriColors.charcoal,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Enter the secure connection code (e.g. MAT-XXXXXX) generated on the mother\'s MaatriCare device.',
+                            style: MaatriTypography.bodySmall.copyWith(
+                              color: MaatriColors.slate,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _codeController,
+                            textCapitalization: TextCapitalization.characters,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\-]')),
+                              LengthLimitingTextInputFormatter(12),
+                            ],
+                            style: MaatriTypography.bodyLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                              color: MaatriColors.charcoal,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: 'Invite Code',
+                              labelStyle: const TextStyle(color: MaatriColors.tealDark),
+                              hintText: 'MAT-XXXXXX',
+                              hintStyle: const TextStyle(color: MaatriColors.mediumGray),
+                              prefixIcon: const Icon(Icons.link_rounded, color: MaatriColors.teal),
+                              filled: true,
+                              fillColor: MaatriColors.snowWhite,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: MaatriColors.lightGray),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: MaatriColors.lightGray),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: MaatriColors.teal, width: 1.5),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter an invite code';
+                              }
+                              if (!value.trim().toUpperCase().startsWith('MAT-')) {
+                                return 'Code must start with MAT-';
+                              }
+                              if (value.trim().length < 8) {
+                                return 'Code is too short';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: MaatriColors.teal,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onPressed: _isProcessing ? null : _handleJoinConnection,
+                              child: const Text(
+                                'LINK WITH MOTHER',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Clean switch account/logout option
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: _isProcessing ? null : _handleSignOut,
+                      icon: const Icon(Icons.logout_rounded, size: 18, color: MaatriColors.danger),
+                      label: Text(
+                        'Sign Out / Switch Account',
+                        style: MaatriTypography.labelMedium.copyWith(
+                          color: MaatriColors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          if (_isProcessing)
+            Container(
+              color: Colors.black.withValues(alpha: 0.25),
+              child: Center(
+                child: GlassCard(
+                  width: 220,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(color: MaatriColors.teal),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Verifying Code...',
+                        style: MaatriTypography.titleSmall.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: MaatriColors.charcoal,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Linking your account',
+                        style: MaatriTypography.bodySmall.copyWith(
+                          color: MaatriColors.slate,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBenefitCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String description,
+  }) {
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: MaatriTypography.titleSmall.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: MaatriColors.charcoal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: MaatriTypography.bodySmall.copyWith(
+                    color: MaatriColors.slate,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

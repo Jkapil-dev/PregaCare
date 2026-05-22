@@ -56,6 +56,9 @@ class JournalProvider extends ChangeNotifier {
   }
 
   Future<void> saveJournal(JournalEntry entry) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify journal entries.');
+    }
     _isLoading = true;
     notifyListeners();
 
@@ -72,6 +75,9 @@ class JournalProvider extends ChangeNotifier {
   }
 
   Future<void> deleteJournal(String id) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify journal entries.');
+    }
     _isLoading = true;
     notifyListeners();
 
@@ -88,6 +94,9 @@ class JournalProvider extends ChangeNotifier {
   }
 
   Future<void> toggleBookmark(String id) async {
+    if (_userProvider?.role == 'partner') {
+      throw Exception('Only Mother accounts can modify journal entries.');
+    }
     try {
       await _storageService.toggleBookmark(id);
       await loadJournals();

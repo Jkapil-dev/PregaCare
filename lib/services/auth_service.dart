@@ -17,10 +17,11 @@ class AuthService {
   Future<UserCredential> signUp({
     required String email,
     required String password,
+    required String role,
     String? displayName,
   }) async {
     try {
-      debugPrint('AuthService: Registering new user with email: $email');
+      debugPrint('AuthService: Registering new user with email: $email, role: $role');
       final UserCredential credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -35,7 +36,7 @@ class AuthService {
         }
 
         // Create the corresponding document in Firestore: users/{uid}
-        await _createFirestoreUserDocument(user, displayName: displayName);
+        await _createFirestoreUserDocument(user, role: role, displayName: displayName);
       }
 
       return credential;
@@ -88,20 +89,24 @@ class AuthService {
   }
 
   /// Helper to create a user's Firestore document at users/{uid}
-  Future<void> _createFirestoreUserDocument(User user, {String? displayName}) async {
+  Future<void> _createFirestoreUserDocument(User user, {required String role, String? displayName}) async {
     final docRef = _db.collection('users').doc(user.uid);
     
     final userData = {
       'uid': user.uid,
       'email': user.email,
       'displayName': displayName ?? user.displayName ?? '',
+      'role': role,
+      'linkedConnectionId': '',
+      'linkedPartnerUid': '',
+      'linkedMotherUid': '',
+      'onboardingCompleted': role == 'partner',
       'createdAt': FieldValue.serverTimestamp(),
-      'onboardingCompleted': false,
       'pregnancyWeek': 0,
       'trimester': 1,
     };
 
-    debugPrint('AuthService: Creating Firestore document at users/${user.uid}');
+    debugPrint('AuthService: Creating Firestore document at users/${user.uid} with role: $role');
     await docRef.set(userData, SetOptions(merge: true));
   }
 
@@ -111,8 +116,20 @@ class AuthService {
     final docSnapshot = await docRef.get();
     
     if (!docSnapshot.exists) {
-      debugPrint('AuthService: Firestore document users/${user.uid} missing. Re-creating.');
-      await _createFirestoreUserDocument(user);
+      debugPrint('AuthService: Firestore document users/${user.uid} missing. Re-creating with default role "mother".');
+      await _createFirestoreUserDocument(user, role: 'mother');
+    } else {
+      final data = docSnapshot.data();
+      if (data == null || !data.containsKey('role') || data['role'] == null || (data['role'] as String).isEmpty) {
+        debugPrint('AuthService: Firestore document users/${user.uid} exists but missing "role". Merging "mother" role.');
+        await docRef.set({
+          'role': 'mother',
+          'linkedConnectionId': data?['linkedConnectionId'] ?? '',
+          'linkedPartnerUid': data?['linkedPartnerUid'] ?? '',
+          'linkedMotherUid': data?['linkedMotherUid'] ?? '',
+          'onboardingCompleted': data?['onboardingCompleted'] ?? false,
+        }, SetOptions(merge: true));
+      }
     }
   }
 }

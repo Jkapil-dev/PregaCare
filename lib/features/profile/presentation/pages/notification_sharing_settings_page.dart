@@ -238,7 +238,7 @@ class _NotificationSharingSettingsPageState extends State<NotificationSharingSet
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: MaatriColors.teal.withValues(alpha: 0.12),
+              color: MaatriColors.teal.withOpacity( 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.notifications_active_rounded, color: MaatriColors.teal, size: 24),
@@ -288,7 +288,7 @@ class _NotificationSharingSettingsPageState extends State<NotificationSharingSet
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor.withOpacity( 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 22),

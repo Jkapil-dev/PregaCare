@@ -34,7 +34,7 @@ class TimelinePage extends StatelessWidget {
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       // Timeline line
       SizedBox(width: 40, child: Column(children: [
-        Container(width: isCurrent ? 16 : 10, height: isCurrent ? 16 : 10, decoration: BoxDecoration(shape: BoxShape.circle, color: color, boxShadow: isCurrent ? [BoxShadow(color: MaatriColors.coral.withValues(alpha: 0.4), blurRadius: 8)] : null)),
+        Container(width: isCurrent ? 16 : 10, height: isCurrent ? 16 : 10, decoration: BoxDecoration(shape: BoxShape.circle, color: color, boxShadow: isCurrent ? [BoxShadow(color: MaatriColors.coral.withOpacity( 0.4), blurRadius: 8)] : null)),
         if (week < 40) Container(width: 2, height: 60, color: isPast ? MaatriColors.tealLight : MaatriColors.lightGray),
       ])),
       Expanded(child: Container(
@@ -43,11 +43,11 @@ class TimelinePage extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text('Week $week', style: MaatriTypography.titleMedium.copyWith(color: isCurrent ? Colors.white : MaatriColors.charcoal, fontWeight: FontWeight.w700)),
-            Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: isCurrent ? Colors.white.withValues(alpha: 0.2) : MaatriColors.cloudGray, borderRadius: BorderRadius.circular(999)),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: isCurrent ? Colors.white.withOpacity( 0.2) : MaatriColors.cloudGray, borderRadius: BorderRadius.circular(999)),
               child: Text('T$trimester', style: MaatriTypography.labelSmall.copyWith(color: isCurrent ? Colors.white : MaatriColors.slate))),
           ]),
           const SizedBox(height: 4),
-          Text('Baby size: $size', style: MaatriTypography.bodySmall.copyWith(color: isCurrent ? Colors.white.withValues(alpha: 0.9) : MaatriColors.slate)),
+          Text('Baby size: $size', style: MaatriTypography.bodySmall.copyWith(color: isCurrent ? Colors.white.withOpacity( 0.9) : MaatriColors.slate)),
           if (isCurrent) ...[const SizedBox(height: 4), Text('📍 You are here', style: MaatriTypography.labelMedium.copyWith(color: Colors.white))],
         ]),
       )),

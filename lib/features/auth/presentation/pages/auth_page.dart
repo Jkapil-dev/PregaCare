@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
-import '../../../../core/navigation/app_router.dart';
 import '../../../../providers/auth_provider.dart';
 
 /// Authentication page supporting toggling between Email/Password Login & Sign Up
@@ -22,6 +20,7 @@ class _AuthPageState extends State<AuthPage> {
   final _nameController = TextEditingController();
   bool _isSignUp = false;
   bool _obscurePassword = true;
+  String _selectedRole = 'mother';
 
   @override
   void dispose() {
@@ -41,6 +40,7 @@ class _AuthPageState extends State<AuthPage> {
       success = await authProvider.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+        role: _selectedRole,
         displayName: _nameController.text.trim(),
       );
     } else {
@@ -127,7 +127,7 @@ class _AuthPageState extends State<AuthPage> {
                   Container(
                     height: 50,
                     decoration: BoxDecoration(
-                      color: MaatriColors.lightGray.withOpacity(0.5),
+                      color: MaatriColors.lightGray.withOpacity( 0.5),
                       borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
                     ),
                     child: Row(
@@ -265,6 +265,68 @@ class _AuthPageState extends State<AuthPage> {
                     },
                   ),
                   const SizedBox(height: MaatriTheme.spacingLg),
+
+                  // Role Selection (Sign Up Only)
+                  if (_isSignUp) ...[
+                    Text(
+                      'Account Type',
+                      style: MaatriTypography.labelLarge.copyWith(
+                        color: MaatriColors.charcoal,
+                      ),
+                    ),
+                    const SizedBox(height: MaatriTheme.spacingXs),
+                    Container(
+                      height: 52,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: MaatriColors.lightGray.withOpacity( 0.3),
+                        borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedRole = 'mother'),
+                              child: Container(
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: _selectedRole == 'mother' ? MaatriColors.teal : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
+                                  boxShadow: _selectedRole == 'mother' ? MaatriTheme.glowTeal : null,
+                                ),
+                                child: Text(
+                                  'Mother Account',
+                                  style: MaatriTypography.labelLarge.copyWith(
+                                    color: _selectedRole == 'mother' ? Colors.white : MaatriColors.charcoal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedRole = 'partner'),
+                              child: Container(
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: _selectedRole == 'partner' ? MaatriColors.teal : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
+                                  boxShadow: _selectedRole == 'partner' ? MaatriTheme.glowTeal : null,
+                                ),
+                                child: Text(
+                                  'Partner Account',
+                                  style: MaatriTypography.labelLarge.copyWith(
+                                    color: _selectedRole == 'partner' ? Colors.white : MaatriColors.charcoal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: MaatriTheme.spacingLg),
+                  ],
 
                   // Submit Button
                   SizedBox(

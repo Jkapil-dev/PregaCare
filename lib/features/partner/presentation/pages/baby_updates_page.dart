@@ -48,7 +48,7 @@ class _BabyUpdatesPageState extends State<BabyUpdatesPage> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.pinkAccent.withValues(alpha: 0.1),
+                      color: Colors.pinkAccent.withOpacity( 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.lock_outline_rounded, color: Colors.pinkAccent, size: 48),
@@ -123,7 +123,7 @@ class _BabyUpdatesPageState extends State<BabyUpdatesPage> {
                         color: isSelected
                             ? MaatriColors.coral
                             : isCurrent
-                                ? MaatriColors.coral.withValues(alpha: 0.15)
+                                ? MaatriColors.coral.withOpacity( 0.15)
                                 : MaatriColors.pureWhite,
                         borderRadius: BorderRadius.circular(MaatriTheme.radiusMd),
                         border: isCurrent && !isSelected
@@ -214,7 +214,7 @@ class _BabyUpdatesPageState extends State<BabyUpdatesPage> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: MaatriColors.coral.withValues(alpha: 0.1),
+                                color: MaatriColors.coral.withOpacity( 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Icons.star, color: MaatriColors.coral, size: 24),
@@ -273,7 +273,7 @@ class _BabyUpdatesPageState extends State<BabyUpdatesPage> {
             child: Icon(
               Icons.child_care_rounded,
               size: 150,
-              color: Colors.white.withValues(alpha: 0.12),
+              color: Colors.white.withOpacity( 0.12),
             ),
           ),
           Padding(
@@ -287,7 +287,7 @@ class _BabyUpdatesPageState extends State<BabyUpdatesPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity( 0.2),
                         borderRadius: BorderRadius.circular(MaatriTheme.radiusFull),
                       ),
                       child: Text(
@@ -314,7 +314,7 @@ class _BabyUpdatesPageState extends State<BabyUpdatesPage> {
                   style: MaatriTypography.headlineLarge.copyWith(color: Colors.white, fontSize: 26),
                 ),
                 const SizedBox(height: MaatriTheme.spacingLg),
-                Divider(color: Colors.white.withValues(alpha: 0.3)),
+                Divider(color: Colors.white.withOpacity( 0.3)),
                 const SizedBox(height: MaatriTheme.spacingMd),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,

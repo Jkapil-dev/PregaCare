@@ -96,7 +96,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: MaatriColors.coralLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MaatriColors.coralLight.withOpacity( 0.2), borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.favorite_rounded, color: MaatriColors.coral, size: 20),
               ),
               const SizedBox(width: 10),
@@ -182,7 +182,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: MaatriColors.tealLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MaatriColors.tealLight.withOpacity( 0.2), borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.water_drop_rounded, color: MaatriColors.teal, size: 20),
               ),
               const SizedBox(width: 10),
@@ -295,7 +295,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
               return FilterChip(
                 label: Text(symptom),
                 selected: active,
-                selectedColor: MaatriColors.goldenAmber.withValues(alpha: 0.15),
+                selectedColor: MaatriColors.goldenAmber.withOpacity( 0.15),
                 checkmarkColor: MaatriColors.goldenAmber,
                 onSelected: (val) => userProvider.updateSymptom(symptom, val),
               );
@@ -317,7 +317,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: MaatriColors.coralLight.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MaatriColors.coralLight.withOpacity( 0.15), borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.thermostat_rounded, color: MaatriColors.coral, size: 20),
               ),
               const SizedBox(width: 10),

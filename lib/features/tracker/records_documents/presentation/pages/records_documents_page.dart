@@ -92,7 +92,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
                   Center(child: Padding(
                     padding: const EdgeInsets.all(32),
                     child: Column(children: [
-                      Icon(Icons.folder_open_rounded, size: 48, color: MaatriColors.mediumGray.withValues(alpha: 0.5)),
+                      Icon(Icons.folder_open_rounded, size: 48, color: MaatriColors.mediumGray.withOpacity( 0.5)),
                       const SizedBox(height: 8),
                       Text(_selectedCategory == 'All' ? 'No records uploaded yet.' : 'No $_selectedCategory records.', style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
                     ]),
@@ -118,7 +118,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
         ])),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: Colors.white.withOpacity( 0.2), borderRadius: BorderRadius.circular(12)),
           child: Text('${records.length}', style: MaatriTypography.displaySmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ]),
@@ -138,7 +138,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
           child: FilterChip(
             label: Text('$cat ($count)'),
             selected: active,
-            selectedColor: MaatriColors.coralLight.withValues(alpha: 0.4),
+            selectedColor: MaatriColors.coralLight.withOpacity( 0.4),
             checkmarkColor: MaatriColors.coral,
             onSelected: (_) => setState(() => _selectedCategory = cat),
           ),
@@ -159,7 +159,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
               onTap: () => _previewRecord(rec),
               child: Container(
                 width: 56, height: 56,
-                decoration: BoxDecoration(color: catColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: catColor.withOpacity( 0.12), borderRadius: BorderRadius.circular(12)),
                 child: _buildThumbnail(rec, catColor),
               ),
             ),
@@ -176,7 +176,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
               Row(children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: catColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                  decoration: BoxDecoration(color: catColor.withOpacity( 0.15), borderRadius: BorderRadius.circular(6)),
                   child: Text(rec.category, style: TextStyle(color: catColor, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 8),
@@ -249,7 +249,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
 
   Widget _uploadOption(IconData icon, Color color, String title, String subtitle, VoidCallback onTap) {
     return ListTile(
-      leading: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color)),
+      leading: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withOpacity( 0.15), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color)),
       title: Text(title),
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
       onTap: onTap,
@@ -492,7 +492,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
                     height: 100,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: MaatriColors.coralLight.withValues(alpha: 0.2),
+                      color: MaatriColors.coralLight.withOpacity( 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Column(
@@ -516,7 +516,7 @@ class _RecordsDocumentsPageState extends State<RecordsDocumentsPage> {
                     ChoiceChip(
                       label: Text(cat),
                       selected: selectedCategory == cat,
-                      selectedColor: MedicalRecord.getCategoryColor(cat).withValues(alpha: 0.3),
+                      selectedColor: MedicalRecord.getCategoryColor(cat).withOpacity( 0.3),
                       onSelected: (_) => setS(() => selectedCategory = cat),
                     ),
                   ).toList(),

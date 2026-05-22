@@ -103,7 +103,7 @@ class _SharingPermissionsPageState extends State<SharingPermissionsPage> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: MaatriColors.coral.withValues(alpha: 0.12),
+                            color: MaatriColors.coral.withOpacity( 0.12),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.security_rounded, color: MaatriColors.coral, size: 24),
@@ -218,7 +218,7 @@ class _SharingPermissionsPageState extends State<SharingPermissionsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
+                color: iconColor.withOpacity( 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: iconColor, size: 22),

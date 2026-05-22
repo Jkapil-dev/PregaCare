@@ -18,6 +18,7 @@ import 'user_provider.dart';
 class EmergencyProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _emergencyStateSubscription;
   UserProvider? _userProvider;
 
   List<EmergencyContact> _contacts = [];
@@ -27,6 +28,7 @@ class EmergencyProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isSosTriggered = false;
+  Map<String, dynamic>? _connectionEmergencyState;
   Timer? _alarmVibrationTimer;
 
   List<EmergencyContact> get contacts => _contacts;
@@ -35,6 +37,7 @@ class EmergencyProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isSosTriggered => _isSosTriggered;
+  Map<String, dynamic>? get connectionEmergencyState => _connectionEmergencyState;
 
   EmergencyProvider() {
     _init();
@@ -57,12 +60,39 @@ class EmergencyProvider extends ChangeNotifier {
     });
   }
 
+  void _listenToConnectionEmergencyState(String connectionId) {
+    _emergencyStateSubscription?.cancel();
+    _emergencyStateSubscription = _db
+        .collection('pregnancy_connections')
+        .doc(connectionId)
+        .collection('emergency_state')
+        .doc('current')
+        .snapshots()
+        .listen((docSnap) {
+      if (docSnap.exists) {
+        _connectionEmergencyState = docSnap.data();
+        debugPrint('EmergencyProvider: Connection emergency state synchronized: $_connectionEmergencyState');
+        _cacheConnectionEmergencyState();
+        notifyListeners();
+      } else {
+        _connectionEmergencyState = null;
+        _cacheConnectionEmergencyState();
+        notifyListeners();
+      }
+    }, onError: (e) {
+      debugPrint('EmergencyProvider: Connection emergency state subscription error: $e');
+    });
+  }
+
   void update(UserProvider userProvider) {
     final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
     final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
 
     final oldHasPermission = _userProvider?.hasEmergencyPermission ?? false;
     final newHasPermission = userProvider.hasEmergencyPermission;
+
+    final oldConnectionId = _userProvider?.linkedConnectionId;
+    final newConnectionId = userProvider.linkedConnectionId;
 
     _userProvider = userProvider;
 
@@ -73,6 +103,17 @@ class EmergencyProvider extends ChangeNotifier {
         _contacts = [];
         _medicalInfo = const MedicalEmergencyInfo();
         _savedHospitals = [];
+        notifyListeners();
+      }
+    }
+
+    if (oldConnectionId != newConnectionId || (_emergencyStateSubscription == null && newConnectionId != null && newConnectionId.isNotEmpty)) {
+      _emergencyStateSubscription?.cancel();
+      _emergencyStateSubscription = null;
+      if (newConnectionId != null && newConnectionId.isNotEmpty) {
+        _listenToConnectionEmergencyState(newConnectionId);
+      } else {
+        _connectionEmergencyState = null;
         notifyListeners();
       }
     }
@@ -110,9 +151,28 @@ class EmergencyProvider extends ChangeNotifier {
         _savedHospitals = decoded.map((e) => Hospital.fromJson(e as Map<String, dynamic>)).toList();
       }
 
+      // Load Connection Emergency State
+      final connectionEmergencyJson = prefs.getString('mc_connection_emergency_state');
+      if (connectionEmergencyJson != null) {
+        _connectionEmergencyState = jsonDecode(connectionEmergencyJson) as Map<String, dynamic>?;
+      }
+
       notifyListeners();
     } catch (e) {
       debugPrint('EmergencyProvider offline cache read error: $e');
+    }
+  }
+
+  Future<void> _cacheConnectionEmergencyState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_connectionEmergencyState != null) {
+        await prefs.setString('mc_connection_emergency_state', jsonEncode(_connectionEmergencyState));
+      } else {
+        await prefs.remove('mc_connection_emergency_state');
+      }
+    } catch (e) {
+      debugPrint('EmergencyProvider cache connection emergency state error: $e');
     }
   }
 
@@ -344,6 +404,58 @@ class EmergencyProvider extends ChangeNotifier {
   // SOS EMERGENCY ALARM ACTIONS
   // ==========================================
 
+  Future<void> updateEmergencyLocation(double lat, double lng) async {
+    final uid = _userProvider?.isPartner == true ? _userProvider?.linkedMotherUid : _userProvider?.uid;
+    if (uid == null || uid.isEmpty) return;
+
+    try {
+      await _db.collection('users').doc(uid).update({
+        'sosLatitude': lat,
+        'sosLongitude': lng,
+      });
+      debugPrint('SOS position updated in Firestore user doc for $uid');
+    } catch (e) {
+      debugPrint('Error updating SOS position in user doc: $e');
+    }
+
+    final connectionId = _userProvider?.linkedConnectionId;
+    if (connectionId != null && connectionId.isNotEmpty) {
+      try {
+        await _db
+            .collection('pregnancy_connections')
+            .doc(connectionId)
+            .collection('emergency_state')
+            .doc('current')
+            .set({
+          'location': GeoPoint(lat, lng),
+          'latitude': lat,
+          'longitude': lng,
+          'mapsUrl': 'https://maps.google.com/?q=$lat,$lng',
+          'locationTimestamp': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        debugPrint('Emergency position updated in connection $connectionId');
+      } catch (e) {
+        debugPrint('Error updating connection emergency position: $e');
+      }
+    }
+  }
+
+  Future<void> refreshSOSLocation(BuildContext context) async {
+    final hasPermission = _userProvider?.hasEmergencyPermission ?? true;
+    final uid = _userId;
+    if (!hasPermission || uid.isEmpty) return;
+
+    try {
+      final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+      final position = await locationProvider.fetchLocation(context);
+      if (position != null) {
+        await updateEmergencyLocation(position.latitude, position.longitude);
+      }
+    } catch (e) {
+      debugPrint('Error refreshing SOS location: $e');
+    }
+  }
+
   Future<void> triggerSOSAlert(BuildContext context) async {
     if (_userProvider?.role == 'partner') {
       throw Exception('Only Mother accounts can trigger SOS alerts.');
@@ -351,34 +463,6 @@ class EmergencyProvider extends ChangeNotifier {
     if (_isSosTriggered) return;
     _isSosTriggered = true;
     notifyListeners();
-
-    // Update SOS active state in Firestore Mother document first
-    final uid = _userId;
-    double? lat;
-    double? lng;
-    try {
-      final locationProvider = Provider.of<LocationProvider>(context, listen: false);
-      // Try to fetch location quickly (getCurrentPosition has timeout in LocationProvider)
-      final position = await locationProvider.fetchLocation(context);
-      if (position != null) {
-        lat = position.latitude;
-        lng = position.longitude;
-      }
-    } catch (e) {
-      debugPrint('Error getting location during SOS trigger: $e');
-    }
-
-    try {
-      await _db.collection('users').doc(uid).update({
-        'sosActive': true,
-        'sosLatitude': lat,
-        'sosLongitude': lng,
-        'sosTriggeredAt': FieldValue.serverTimestamp(),
-      });
-      debugPrint('SOS state updated in Firestore for $uid');
-    } catch (e) {
-      debugPrint('Error updating SOS state in Firestore: $e');
-    }
 
     // 1. Show high-priority emergency notification
     try {
@@ -413,13 +497,108 @@ class EmergencyProvider extends ChangeNotifier {
       }
     }
 
-    // 4. Gather GPS and trigger native location sharing
-    if (context.mounted) {
+    // 4. Fetch GPS and update Firestore Mother & Connection documents
+    double? lat;
+    double? lng;
+    try {
+      final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+      final position = await locationProvider.fetchLocation(context);
+      if (position != null) {
+        lat = position.latitude;
+        lng = position.longitude;
+      }
+    } catch (e) {
+      debugPrint('Error getting location during SOS trigger: $e');
+    }
+
+    final uid = _userId;
+    try {
+      await _db.collection('users').doc(uid).update({
+        'sosActive': true,
+        'sosLatitude': lat,
+        'sosLongitude': lng,
+        'sosTriggeredAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('SOS state updated in Firestore for $uid');
+    } catch (e) {
+      debugPrint('Error updating SOS state in Firestore: $e');
+    }
+
+    // Write to connection emergency subcollection
+    final connectionId = _userProvider?.linkedConnectionId;
+    if (connectionId != null && connectionId.isNotEmpty) {
+      try {
+        await _db
+            .collection('pregnancy_connections')
+            .doc(connectionId)
+            .collection('emergency_state')
+            .doc('current')
+            .set({
+          'active': true,
+          'triggeredBy': 'mother',
+          'triggeredAt': FieldValue.serverTimestamp(),
+          'location': (lat != null && lng != null) ? GeoPoint(lat, lng) : null,
+          'latitude': lat,
+          'longitude': lng,
+          'mapsUrl': (lat != null && lng != null) ? 'https://maps.google.com/?q=$lat,$lng' : null,
+          'locationTimestamp': FieldValue.serverTimestamp(),
+          'resolved': false,
+          'emergencyLevel': 'critical',
+        });
+        debugPrint('Emergency state created in connection $connectionId');
+      } catch (e) {
+        debugPrint('Error setting connection emergency state: $e');
+      }
+    }
+
+    // 5. Native Location Sharing
+    if (lat != null && lng != null && context.mounted) {
       try {
         final locationProvider = Provider.of<LocationProvider>(context, listen: false);
         unawaited(locationProvider.shareLocation(context));
       } catch (e) {
-        debugPrint('Error getting LocationProvider or sharing location: $e');
+        debugPrint('Error sharing location: $e');
+      }
+    }
+  }
+
+  Future<void> resolveEmergency() async {
+    _isSosTriggered = false;
+    _alarmVibrationTimer?.cancel();
+    _alarmVibrationTimer = null;
+    notifyListeners();
+
+    final uid = _userProvider?.isPartner == true ? _userProvider?.linkedMotherUid : _userProvider?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      try {
+        await _db.collection('users').doc(uid).update({
+          'sosActive': false,
+          'sosLatitude': FieldValue.delete(),
+          'sosLongitude': FieldValue.delete(),
+          'sosTriggeredAt': FieldValue.delete(),
+        });
+        debugPrint('SOS state cleared in Firestore user doc for $uid');
+      } catch (e) {
+        debugPrint('Error clearing SOS state in Firestore user doc: $e');
+      }
+    }
+
+    final connectionId = _userProvider?.linkedConnectionId;
+    if (connectionId != null && connectionId.isNotEmpty) {
+      try {
+        await _db
+            .collection('pregnancy_connections')
+            .doc(connectionId)
+            .collection('emergency_state')
+            .doc('current')
+            .set({
+          'active': false,
+          'resolved': true,
+          'resolvedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        debugPrint('Emergency resolved in connection $connectionId');
+      } catch (e) {
+        debugPrint('Error resolving connection emergency state: $e');
       }
     }
   }
@@ -428,28 +607,13 @@ class EmergencyProvider extends ChangeNotifier {
     if (_userProvider?.role == 'partner') {
       throw Exception('Only Mother accounts can cancel SOS alerts.');
     }
-    _isSosTriggered = false;
-    _alarmVibrationTimer?.cancel();
-    _alarmVibrationTimer = null;
-    notifyListeners();
-
-    try {
-      final uid = _userId;
-      await _db.collection('users').doc(uid).update({
-        'sosActive': false,
-        'sosLatitude': FieldValue.delete(),
-        'sosLongitude': FieldValue.delete(),
-        'sosTriggeredAt': FieldValue.delete(),
-      });
-      debugPrint('SOS state cleared in Firestore for $uid');
-    } catch (e) {
-      debugPrint('Error clearing SOS state in Firestore: $e');
-    }
+    await resolveEmergency();
   }
 
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _emergencyStateSubscription?.cancel();
     _alarmVibrationTimer?.cancel();
     super.dispose();
   }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
@@ -37,6 +36,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> signUp({
     required String email,
     required String password,
+    required String role,
     String? displayName,
   }) async {
     _setLoading(true);
@@ -44,6 +44,7 @@ class AuthProvider extends ChangeNotifier {
       await _authService.signUp(
         email: email,
         password: password,
+        role: role,
         displayName: displayName,
       );
       // Auth changes listener will trigger profile fetch & UI routing

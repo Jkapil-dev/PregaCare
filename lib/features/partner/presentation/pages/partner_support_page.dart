@@ -394,7 +394,7 @@ class _LockedFeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      backgroundColor: Colors.grey.withValues(alpha: 0.05),
+      backgroundColor: Colors.grey.withOpacity( 0.05),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: MaatriTheme.spacingMd),
         child: Row(

@@ -20,6 +20,7 @@ class UserProvider extends ChangeNotifier {
   Map<String, dynamic>? _connectionData;
   Map<String, dynamic>? _motherNotificationSettings;
   bool _isLoading = true;
+  bool _hasFetched = false;
   String? _errorMessage;
   Timer? _partnerSosVibrationTimer;
 
@@ -31,7 +32,13 @@ class UserProvider extends ChangeNotifier {
   Map<String, dynamic>? get profile => _profile;
   Map<String, dynamic>? get motherProfile => _motherProfile;
   Map<String, dynamic>? get motherNotificationSettings => _motherNotificationSettings;
-  bool get isLoading => _isLoading;
+  bool get isLoading {
+    final hasUser = FirebaseAuth.instance.currentUser != null;
+    if (hasUser && !_hasFetched) {
+      return true;
+    }
+    return _isLoading;
+  }
   String? get errorMessage => _errorMessage;
 
   bool get isOnboardingCompleted {
@@ -57,7 +64,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // --- Partner Role & Linking Getters ---
-  String get role => _profile?['role'] ?? 'mother';
+  String get role => _profile?['role'] ?? '';
   bool get isPartner => role == 'partner';
   bool get isMother => role == 'mother';
   bool get isLinked => _profile?['linkedConnectionId'] != null && (_profile?['linkedConnectionId'] as String).isNotEmpty;
@@ -568,6 +575,7 @@ class UserProvider extends ChangeNotifier {
         debugPrint('UserProvider: User logged out. Clearing profile.');
         await _cancelSubscriptions();
         _profile = null;
+        _hasFetched = false;
         _isLoading = false;
         notifyListeners();
       }
@@ -674,6 +682,7 @@ class UserProvider extends ChangeNotifier {
   /// Fetch Firestore document users/{uid}
   Future<void> fetchProfile(String uid) async {
     _isLoading = true;
+    _hasFetched = false;
     _errorMessage = null;
     notifyListeners();
 
@@ -713,15 +722,18 @@ class UserProvider extends ChangeNotifier {
           await _cancelSubscriptions();
           debugPrint('UserProvider: Profile document does not exist for $uid');
         }
+        _hasFetched = true;
         _isLoading = false;
         _errorMessage = null;
         notifyListeners();
       }, onError: (e) {
+        _hasFetched = true;
         _errorMessage = e.toString();
         _isLoading = false;
         notifyListeners();
       });
     } catch (e) {
+      _hasFetched = true;
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -770,13 +782,13 @@ class UserProvider extends ChangeNotifier {
           }
         });
 
+        if (pregnancyData.isNotEmpty) {
+          throw Exception('Partners are not authorized to modify pregnancy/maternal data.');
+        }
+
         if (personalData.isNotEmpty) {
           personalData['updatedAt'] = FieldValue.serverTimestamp();
           await _db.collection('users').doc(user.uid).set(personalData, SetOptions(merge: true));
-        }
-        if (pregnancyData.isNotEmpty) {
-          pregnancyData['updatedAt'] = FieldValue.serverTimestamp();
-          await _db.collection('users').doc(profileTargetUid).set(pregnancyData, SetOptions(merge: true));
         }
       } else {
         final targetUid = profileTargetUid;
