@@ -31,6 +31,10 @@ class EmergencyProvider extends ChangeNotifier {
   Map<String, dynamic>? _connectionEmergencyState;
   Timer? _alarmVibrationTimer;
 
+  String? _cachedEffectiveUid;
+  bool _cachedHasPermission = false;
+  String? _cachedConnectionId;
+
   List<EmergencyContact> get contacts => _contacts;
   MedicalEmergencyInfo get medicalInfo => _medicalInfo;
   List<Hospital> get savedHospitals => _savedHospitals;
@@ -85,18 +89,16 @@ class EmergencyProvider extends ChangeNotifier {
   }
 
   void update(UserProvider userProvider) {
-    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
-    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
-
-    final oldHasPermission = _userProvider?.hasEmergencyPermission ?? false;
-    final newHasPermission = userProvider.hasEmergencyPermission;
-
-    final oldConnectionId = _userProvider?.linkedConnectionId;
-    final newConnectionId = userProvider.linkedConnectionId;
-
     _userProvider = userProvider;
 
-    if (oldEffectiveUid != newEffectiveUid || oldHasPermission != newHasPermission) {
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+    final newHasPermission = userProvider.hasEmergencyPermission;
+    final newConnectionId = userProvider.linkedConnectionId;
+
+    if (_cachedEffectiveUid != newEffectiveUid || _cachedHasPermission != newHasPermission) {
+      _cachedEffectiveUid = newEffectiveUid;
+      _cachedHasPermission = newHasPermission;
+
       if (newHasPermission && newEffectiveUid != null && newEffectiveUid.isNotEmpty) {
         loadAllEmergencyData();
       } else {
@@ -107,7 +109,8 @@ class EmergencyProvider extends ChangeNotifier {
       }
     }
 
-    if (oldConnectionId != newConnectionId || (_emergencyStateSubscription == null && newConnectionId != null && newConnectionId.isNotEmpty)) {
+    if (_cachedConnectionId != newConnectionId || (_emergencyStateSubscription == null && newConnectionId != null && newConnectionId.isNotEmpty)) {
+      _cachedConnectionId = newConnectionId;
       _emergencyStateSubscription?.cancel();
       _emergencyStateSubscription = null;
       if (newConnectionId != null && newConnectionId.isNotEmpty) {

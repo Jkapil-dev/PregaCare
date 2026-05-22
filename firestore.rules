@@ -127,6 +127,57 @@ service cloud.firestore {
           exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
           request.auth.uid in get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.linkedUsers;
       }
+
+      match /shared_state/{docId} {
+        allow read: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.linkedUsers;
+        allow write: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.motherUid == request.auth.uid;
+      }
+
+      match /shared_medicines/{docId} {
+        allow read: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.linkedUsers;
+        allow write: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.motherUid == request.auth.uid;
+      }
+
+      match /shared_appointments/{docId} {
+        allow read: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.linkedUsers;
+        allow write: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.motherUid == request.auth.uid;
+      }
+
+      match /shared_milestones/{docId} {
+        allow read: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.linkedUsers;
+        allow write: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.motherUid == request.auth.uid;
+      }
+
+      match /shared_memories/{docId} {
+        allow read, write: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.linkedUsers;
+      }
+
+      match /shared_reminders/{docId} {
+        allow read: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.linkedUsers;
+        allow write: if signedIn() && 
+          exists(/databases/$(database)/documents/pregnancy_connections/$(connectionId)) &&
+          get(/databases/$(database)/documents/pregnancy_connections/$(connectionId)).data.motherUid == request.auth.uid;
+      }
     }
   }
 }

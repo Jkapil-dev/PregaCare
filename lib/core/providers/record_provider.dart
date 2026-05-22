@@ -15,6 +15,9 @@ class RecordProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  String? _cachedEffectiveUid;
+  bool _cachedHasPermission = false;
+
   RecordProvider() {
     _init();
   }
@@ -30,15 +33,15 @@ class RecordProvider extends ChangeNotifier {
   }
 
   void update(UserProvider userProvider) {
-    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
-    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
-
-    final oldHasPermission = _userProvider?.hasTrackerPermission ?? false;
-    final newHasPermission = userProvider.hasTrackerPermission;
-
     _userProvider = userProvider;
 
-    if (oldEffectiveUid != newEffectiveUid || oldHasPermission != newHasPermission) {
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+    final newHasPermission = userProvider.hasTrackerPermission;
+
+    if (_cachedEffectiveUid != newEffectiveUid || _cachedHasPermission != newHasPermission) {
+      _cachedEffectiveUid = newEffectiveUid;
+      _cachedHasPermission = newHasPermission;
+
       if (newHasPermission && newEffectiveUid != null && newEffectiveUid.isNotEmpty) {
         loadRecords();
       } else {

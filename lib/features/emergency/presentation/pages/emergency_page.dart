@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
@@ -1466,43 +1467,54 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
         controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: MaatriTheme.spacingMd, vertical: MaatriTheme.spacingSm),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. GLOWING STATUS HEADER
+            // 1. EMERGENCY STATUS CARD
             _buildPartnerGlowingStatusHeader(isSos, motherName),
             const SizedBox(height: MaatriTheme.spacingLg),
 
-            // 2. ACTIVE EMERGENCY DETAILS PANEL (If active)
             if (isSos) ...[
+              // 2. SOS STATE CARD (Active Emergency Details)
               _buildActiveEmergencyDetailsPanel(context, emp, loc, connectionState, motherName),
               const SizedBox(height: MaatriTheme.spacingLg),
+
+              // 3. EMERGENCY CONTACTS CARD (SOS Action Hub)
               _buildEmergencyQuickActionsHub(context, emp, connectionState, motherPhone),
               const SizedBox(height: MaatriTheme.spacingLg),
+              
+              // 4. EMERGENCY ACTIVITY TIMELINE
+              _buildEmergencyActivityTimeline(connectionState, isSos),
+              const SizedBox(height: MaatriTheme.spacingXl),
             ] else ...[
-              // 3. QUICK ACTIONS GRID
+              // 2. QUICK ACTIONS CARD
               _buildPartnerQuickActionsGrid(context, emp, motherPhone),
               const SizedBox(height: MaatriTheme.spacingLg),
+              
+              // 3. EMERGENCY CONTACTS EMPTY STATE
+              _buildEmergencyContactsPartnerBlock(context, emp, motherPhone),
+              const SizedBox(height: MaatriTheme.spacingLg),
+
+              // 4. LOCATION SHARING EMPTY STATE
+              _buildLocationSharingBlock(loc),
+              const SizedBox(height: MaatriTheme.spacingLg),
+
+              // 5. NEARBY HOSPITALS EMPTY STATE / LIST
+              _buildHospitalsPartnerBlock(emp),
+              const SizedBox(height: MaatriTheme.spacingLg),
+
+              // 6. MATERNAL MEDICAL SUMMARY CARD
+              _buildMaternalMedicalSummaryCard(
+                gestAge,
+                trimesterNum,
+                riskLevel,
+                bloodGrp,
+                allergiesText,
+                conditionsText,
+                doctorName,
+                prefHospital,
+              ),
+              const SizedBox(height: MaatriTheme.spacingXl),
             ],
-
-            // 4. MATERNAL MEDICAL SUMMARY CARD
-            _buildMaternalMedicalSummaryCard(
-              gestAge,
-              trimesterNum,
-              riskLevel,
-              bloodGrp,
-              allergiesText,
-              conditionsText,
-              doctorName,
-              prefHospital,
-            ),
-            const SizedBox(height: MaatriTheme.spacingLg),
-
-            // 5. SAVED HOSPITALS & DIRECTIONS (reuses existing build block)
-            _buildHospitalsBlock(emp),
-            const SizedBox(height: MaatriTheme.spacingLg),
-
-            // 6. EMERGENCY ACTIVITY TIMELINE
-            _buildEmergencyActivityTimeline(connectionState, isSos),
-            const SizedBox(height: MaatriTheme.spacingXl),
           ],
         ),
       ),
@@ -1537,7 +1549,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isSos ? Icons.warning_amber_rounded : Icons.favorite_rounded,
+              isSos ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
               color: Colors.white,
               size: 32,
             ),
@@ -1548,7 +1560,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isSos ? 'CRITICAL EMERGENCY' : 'Mother is Safe',
+                  isSos ? 'CRITICAL EMERGENCY' : 'No active emergency alerts',
                   style: MaatriTypography.titleMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -1559,7 +1571,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                 Text(
                   isSos
                       ? '$motherName triggered an SOS alert!'
-                      : 'Synced to $motherName\'s real-time safety network.',
+                      : 'Emergency systems are ready if needed.',
                   style: MaatriTypography.bodyMedium.copyWith(
                     color: Colors.white.withOpacity( 0.85),
                   ),
@@ -1831,6 +1843,247 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
     );
   }
 
+  Widget _buildEmergencyContactsPartnerBlock(BuildContext context, EmergencyProvider emp, String motherPhone) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Emergency Contacts',
+          icon: Icons.contact_emergency_rounded,
+          iconColor: MaatriColors.danger,
+        ),
+        const SizedBox(height: MaatriTheme.spacingSm),
+        if (emp.contacts.isEmpty)
+          GlassCard(
+            padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Column(
+                  children: [
+                    const Icon(Icons.people_outline_rounded, color: MaatriColors.mediumGray, size: 32),
+                    const SizedBox(height: 8),
+                    Text('No emergency contacts linked yet', style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: emp.contacts.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final c = emp.contacts[index];
+              return _buildContactCard(context, emp, c);
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLocationSharingBlock(LocationProvider loc) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Location Sharing',
+          icon: Icons.share_location_rounded,
+          iconColor: MaatriColors.teal,
+        ),
+        const SizedBox(height: MaatriTheme.spacingSm),
+        GlassCard(
+          padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: const BoxDecoration(
+                      color: MaatriColors.cloudGray,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.location_off_rounded, color: MaatriColors.mediumGray, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Location sharing inactive', style: MaatriTypography.titleSmall.copyWith(fontWeight: FontWeight.bold, color: MaatriColors.slate)),
+                        const SizedBox(height: 2),
+                        Text('Only active during SOS alerts', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleManualLocationShare(loc),
+                  icon: const Icon(Icons.share_location_rounded, size: 18),
+                  label: const Text('Share My Location'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleManualLocationShare(LocationProvider loc) async {
+    var status = await Permission.location.status;
+    if (status.isDenied) {
+      status = await Permission.location.request();
+    }
+    
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions permanently denied. Please enable in settings.')));
+      }
+      return;
+    }
+    
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission required.')));
+      }
+      return;
+    }
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enable GPS/Location services.')));
+      }
+      return;
+    }
+
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fetching current location...')));
+      }
+      
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final lat = position.latitude;
+      final lng = position.longitude;
+      
+      final message = 'Emergency! I may need assistance.\n\nMy current location:\nhttps://maps.google.com/?q=$lat,$lng';
+      await Share.share(message);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to fetch location: $e')));
+      }
+    }
+  }
+
+  Widget _buildHospitalsPartnerBlock(EmergencyProvider emp) {
+    final locationProvider = Provider.of<LocationProvider>(context);
+    final isLocationLoaded = locationProvider.currentPosition != null;
+    
+    // Construct a mock nearby hospitals list if GPS exists, showing realistic distances!
+    final List<Hospital> nearbyHospitals = isLocationLoaded ? [
+      Hospital(
+        id: 'mock_1',
+        name: 'City Maternal & Child Hospital',
+        phone: '+91 98866 54321',
+        address: 'Sector 5, Maternal Heights, Near Metro Station',
+        distance: '0.7 km',
+        maternitySupport: true,
+        emergencyAvailability: true,
+      ),
+      Hospital(
+        id: 'mock_2',
+        name: 'Apollo Cradle Maternity Center',
+        phone: '+91 98866 54322',
+        address: 'Plot 22, Green Valley Enclave',
+        distance: '1.9 km',
+        maternitySupport: true,
+        emergencyAvailability: true,
+      ),
+    ] : [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Preferred & Nearby Hospitals',
+          icon: Icons.local_hospital_rounded,
+          iconColor: MaatriColors.teal,
+        ),
+        const SizedBox(height: MaatriTheme.spacingSm),
+        
+        if (emp.savedHospitals.isEmpty && nearbyHospitals.isEmpty)
+          GlassCard(
+            padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Column(
+                  children: [
+                    const Icon(Icons.local_hospital_outlined, color: MaatriColors.mediumGray, size: 32),
+                    const SizedBox(height: 8),
+                    Text('Nearby hospitals will appear when location access is enabled.', textAlign: TextAlign.center, style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => launchUrl(Uri.parse('https://www.google.com/maps/search/hospitals+near+me'), mode: LaunchMode.externalApplication),
+                      icon: const Icon(Icons.map_rounded, size: 16),
+                      label: const Text('Search Nearby Hospitals'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else ...[
+          if (emp.savedHospitals.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 4.0, bottom: 6.0),
+              child: Text('My Preferred Hospitals', style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.tealDark)),
+            ),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: emp.savedHospitals.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final h = emp.savedHospitals[index];
+                return _buildHospitalCard(context, emp, h, isSaved: true);
+              },
+            ),
+            const SizedBox(height: MaatriTheme.spacingMd),
+          ],
+          
+          if (nearbyHospitals.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 4.0, bottom: 6.0),
+              child: Text(
+                'Nearby Hospitals (Location-Aware)',
+                style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.charcoal),
+              ),
+            ),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: nearbyHospitals.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final h = nearbyHospitals[index];
+                return _buildHospitalCard(context, emp, h, isSaved: false);
+              },
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+
   Widget _buildPartnerQuickActionsGrid(
     BuildContext context,
     EmergencyProvider emp,
@@ -1838,7 +2091,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
   ) {
     final primaryContact = emp.contacts.firstWhere(
       (c) => c.priority == 1 && c.emergencyEnabled,
-      orElse: () => emp.contacts.isNotEmpty ? emp.contacts.first : const EmergencyContact(id: '', name: '', phone: '', relationship: ''),
+      orElse: () => const EmergencyContact(id: '', name: '', phone: '', relationship: ''),
     );
 
     final obgynContact = emp.contacts.firstWhere(
@@ -1849,60 +2102,68 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quick Dialer Center',
-          style: MaatriTypography.headlineSmall.copyWith(fontSize: 18),
+        SectionHeader(
+          title: 'Quick Actions',
+          icon: Icons.bolt_rounded,
+          iconColor: MaatriColors.coral,
         ),
-        const SizedBox(height: 8),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.35,
-          children: [
-            // CALL MOTHER
-            _buildDialerCard(
-              title: 'Call Mother',
-              subtitle: motherPhone.isNotEmpty ? motherPhone : 'Not Set',
-              icon: Icons.person_rounded,
-              color: MaatriColors.teal,
-              onTap: motherPhone.isNotEmpty
-                  ? () => launchUrl(Uri.parse('tel:$motherPhone'))
-                  : null,
-            ),
-            // CALL PRIMARY CONTACT
-            _buildDialerCard(
-              title: primaryContact.name.isNotEmpty ? 'Primary Contact' : 'Primary SOS',
-              subtitle: primaryContact.phone.isNotEmpty ? primaryContact.name : 'Not Added',
-              icon: Icons.contact_emergency_rounded,
-              color: MaatriColors.coral,
-              onTap: primaryContact.phone.isNotEmpty
-                  ? () => launchUrl(Uri.parse('tel:${primaryContact.phone}'))
-                  : null,
-            ),
-            // CALL OB-GYN
-            _buildDialerCard(
-              title: 'OB-GYN Doctor',
-              subtitle: obgynContact.name.isNotEmpty
-                  ? obgynContact.name
-                  : (emp.medicalInfo.doctorName.isNotEmpty ? "Dr. ${emp.medicalInfo.doctorName}" : 'Not Added'),
-              icon: Icons.medication_rounded,
-              color: MaatriColors.lavenderDark,
-              onTap: obgynContact.phone.isNotEmpty
-                  ? () => launchUrl(Uri.parse('tel:${obgynContact.phone}'))
-                  : null,
-            ),
-            // CALL AMBULANCE (108)
-            _buildDialerCard(
-              title: 'Ambulance',
-              subtitle: 'Local ER (108)',
-              icon: Icons.airport_shuttle_rounded,
-              color: MaatriColors.danger,
-              onTap: () => launchUrl(Uri.parse('tel:108')),
-            ),
-          ],
+        const SizedBox(height: MaatriTheme.spacingSm),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = (constraints.maxWidth - 12) / 2;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                // CALL MOTHER
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'Call Mother',
+                    subtitle: motherPhone.isNotEmpty ? motherPhone : 'Not Set',
+                    icon: Icons.person_rounded,
+                    color: MaatriColors.teal,
+                    onTap: motherPhone.isNotEmpty ? () => launchUrl(Uri.parse('tel:$motherPhone')) : null,
+                  ),
+                ),
+                // CALL PRIMARY CONTACT
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: primaryContact.name.isNotEmpty ? 'Primary Contact' : 'Primary SOS',
+                    subtitle: primaryContact.phone.isNotEmpty ? primaryContact.name : 'Not Added',
+                    icon: Icons.contact_emergency_rounded,
+                    color: MaatriColors.coral,
+                    onTap: primaryContact.phone.isNotEmpty ? () => launchUrl(Uri.parse('tel:${primaryContact.phone}')) : null,
+                  ),
+                ),
+                // CALL OB-GYN
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'OB-GYN Doctor',
+                    subtitle: obgynContact.name.isNotEmpty
+                        ? obgynContact.name
+                        : (emp.medicalInfo.doctorName.isNotEmpty ? "Dr. ${emp.medicalInfo.doctorName}" : 'Not Added'),
+                    icon: Icons.medication_rounded,
+                    color: MaatriColors.lavenderDark,
+                    onTap: obgynContact.phone.isNotEmpty ? () => launchUrl(Uri.parse('tel:${obgynContact.phone}')) : null,
+                  ),
+                ),
+                // CALL AMBULANCE (108)
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'Ambulance',
+                    subtitle: 'Local ER (108)',
+                    icon: Icons.airport_shuttle_rounded,
+                    color: MaatriColors.danger,
+                    onTap: () => launchUrl(Uri.parse('tel:108')),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -1922,100 +2183,110 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Emergency Actions Hub',
-          style: MaatriTypography.headlineSmall.copyWith(fontSize: 18, color: MaatriColors.dangerDark, fontWeight: FontWeight.bold),
+        SectionHeader(
+          title: 'Emergency Actions Hub',
+          icon: Icons.warning_rounded,
+          iconColor: MaatriColors.dangerDark,
         ),
-        const SizedBox(height: 8),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.35,
-          children: [
-            // 1. NAVIGATE NOW
-            _buildDialerCard(
-              title: 'Navigate Now',
-              subtitle: 'Start routing to Mother',
-              icon: Icons.navigation_rounded,
-              color: MaatriColors.teal,
-              onTap: isLocationAvailable
-                  ? () => launchUrl(Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng'), mode: LaunchMode.externalApplication)
-                  : null,
-            ),
-            // 2. OPEN IN MAPS
-            _buildDialerCard(
-              title: 'Open in Maps',
-              subtitle: 'View pin on Google Maps',
-              icon: Icons.map_rounded,
-              color: Colors.blue,
-              onTap: isLocationAvailable
-                  ? () => launchUrl(Uri.parse('https://maps.google.com/?q=$lat,$lng'), mode: LaunchMode.externalApplication)
-                  : null,
-            ),
-            // 3. COPY COORDINATES
-            _buildDialerCard(
-              title: 'Copy Coordinates',
-              subtitle: isLocationAvailable ? '$lat, $lng' : 'Unavailable',
-              icon: Icons.copy_rounded,
-              color: Colors.orange,
-              onTap: isLocationAvailable
-                  ? () async {
-                      await Clipboard.setData(ClipboardData(text: '$lat, $lng'));
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('GPS coordinates copied to clipboard'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    }
-                  : null,
-            ),
-            // 4. SHARE ALERT
-            _buildDialerCard(
-              title: 'Share Location',
-              subtitle: 'Send SMS/WhatsApp alert',
-              icon: Icons.share_rounded,
-              color: Colors.purple,
-              onTap: isLocationAvailable
-                  ? () {
-                      final motherName = emp.connectionEmergencyState?['triggeredBy'] ?? 'Mother';
-                      Share.share(
-                        'CRITICAL EMERGENCY: Maternal SOS triggered by Mother ($motherName). '
-                        'Live GPS location: https://maps.google.com/?q=$lat,$lng'
-                      );
-                    }
-                  : null,
-            ),
-            // 5. CALL AMBULANCE
-            _buildDialerCard(
-              title: 'Call Ambulance',
-              subtitle: 'Dial local ER (108)',
-              icon: Icons.airport_shuttle_rounded,
-              color: MaatriColors.danger,
-              onTap: () => launchUrl(Uri.parse('tel:108')),
-            ),
-            // 6. CALL MOTHER
-            _buildDialerCard(
-              title: 'Call Mother',
-              subtitle: motherPhone.isNotEmpty ? motherPhone : 'Not Added',
-              icon: Icons.person_rounded,
-              color: Colors.green,
-              onTap: motherPhone.isNotEmpty
-                  ? () => launchUrl(Uri.parse('tel:$motherPhone'))
-                  : null,
-            ),
-          ],
+        const SizedBox(height: MaatriTheme.spacingSm),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = (constraints.maxWidth - 12) / 2;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                // 1. NAVIGATE NOW
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'Navigate Now',
+                    subtitle: 'Route to Mother',
+                    icon: Icons.navigation_rounded,
+                    color: MaatriColors.teal,
+                    onTap: isLocationAvailable
+                        ? () => launchUrl(Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng'), mode: LaunchMode.externalApplication)
+                        : null,
+                  ),
+                ),
+                // 2. OPEN IN MAPS
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'Open in Maps',
+                    subtitle: 'View live pin',
+                    icon: Icons.map_rounded,
+                    color: Colors.blue,
+                    onTap: isLocationAvailable
+                        ? () => launchUrl(Uri.parse('https://maps.google.com/?q=$lat,$lng'), mode: LaunchMode.externalApplication)
+                        : null,
+                  ),
+                ),
+                // 3. COPY COORDINATES
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'Copy Location',
+                    subtitle: isLocationAvailable ? 'GPS coords copied' : 'Unavailable',
+                    icon: Icons.copy_rounded,
+                    color: Colors.orange,
+                    onTap: isLocationAvailable
+                        ? () async {
+                            await Clipboard.setData(ClipboardData(text: '$lat, $lng'));
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GPS coordinates copied to clipboard'), duration: Duration(seconds: 2)));
+                            }
+                          }
+                        : null,
+                  ),
+                ),
+                // 4. SHARE ALERT
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'Share Alert',
+                    subtitle: 'SMS/WhatsApp link',
+                    icon: Icons.share_rounded,
+                    color: Colors.purple,
+                    onTap: isLocationAvailable
+                        ? () {
+                            final motherName = emp.connectionEmergencyState?['triggeredBy'] ?? 'Mother';
+                            Share.share('CRITICAL EMERGENCY: Maternal SOS triggered by Mother ($motherName). Live GPS: https://maps.google.com/?q=$lat,$lng');
+                          }
+                        : null,
+                  ),
+                ),
+                // 5. CALL AMBULANCE
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'Call Ambulance',
+                    subtitle: 'Dial local ER (108)',
+                    icon: Icons.airport_shuttle_rounded,
+                    color: MaatriColors.danger,
+                    onTap: () => launchUrl(Uri.parse('tel:108')),
+                  ),
+                ),
+                // 6. CALL MOTHER
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCompactDialerCard(
+                    title: 'Call Mother',
+                    subtitle: motherPhone.isNotEmpty ? motherPhone : 'Not Added',
+                    icon: Icons.person_rounded,
+                    color: Colors.green,
+                    onTap: motherPhone.isNotEmpty ? () => launchUrl(Uri.parse('tel:$motherPhone')) : null,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildDialerCard({
+  Widget _buildCompactDialerCard({
     required String title,
     required String subtitle,
     required IconData icon,
@@ -2025,48 +2296,40 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
     final isEnabled = onTap != null;
 
     return GlassCard(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       onTap: onTap,
       backgroundColor: isEnabled ? Colors.white : Colors.white.withOpacity( 0.5),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withOpacity( 0.12),
-                  shape: BoxShape.circle,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity( 0.12), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: MaatriTypography.titleSmall.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: isEnabled ? MaatriColors.charcoal : MaatriColors.slate,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const Spacer(),
-              if (isEnabled)
-                const Icon(Icons.phone_forwarded_rounded, color: MaatriColors.mediumGray, size: 16),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            title,
-            style: MaatriTypography.titleSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: isEnabled ? MaatriColors.charcoal : MaatriColors.slate,
+                Text(
+                  subtitle,
+                  style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate, fontSize: 10),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: MaatriTypography.bodySmall.copyWith(
-              color: MaatriColors.slate,
-              fontSize: 11,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

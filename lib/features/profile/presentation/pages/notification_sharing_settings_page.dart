@@ -98,6 +98,19 @@ class _NotificationSharingSettingsPageState extends State<NotificationSharingSet
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+      final connectionId = userProvider.linkedConnectionId;
+      if (connectionId != null && connectionId.isNotEmpty) {
+        await _db
+            .collection('pregnancy_connections')
+            .doc(connectionId)
+            .collection('shared_reminders')
+            .doc('settings')
+            .set({
+          'sharingSettings': _sharingSettings,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

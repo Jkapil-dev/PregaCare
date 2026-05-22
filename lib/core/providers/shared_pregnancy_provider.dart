@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'user_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,10 +11,18 @@ class SharedPregnancyProvider extends ChangeNotifier {
   List<SharedMilestone> _sharedMilestones = [];
   List<SharedMemory> _sharedMemories = [];
 
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _milestonesSubscription;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _memoriesSubscription;
+  String? _cachedConnectionId;
+
   void update(UserProvider userProvider) {
     _userProvider = userProvider;
-    _listenToSharedMilestones();
-    _listenToSharedMemories();
+    final newConnectionId = userProvider.linkedConnectionId;
+    if (_cachedConnectionId != newConnectionId) {
+      _cachedConnectionId = newConnectionId;
+      _listenToSharedMilestones();
+      _listenToSharedMemories();
+    }
     notifyListeners();
   }
 
@@ -213,11 +222,19 @@ class SharedPregnancyProvider extends ChangeNotifier {
 
 
   void _listenToSharedMilestones() {
-    final uid = _userProvider?.uid;
-    if (uid == null) return;
-    _firestore
+    _milestonesSubscription?.cancel();
+    _milestonesSubscription = null;
+
+    final connectionId = _userProvider?.linkedConnectionId;
+    if (connectionId == null || connectionId.isEmpty) {
+      _sharedMilestones = [];
+      return;
+    }
+    
+    _milestonesSubscription = _firestore
+        .collection('pregnancy_connections')
+        .doc(connectionId)
         .collection('shared_milestones')
-        .where('motherId', isEqualTo: uid)
         .snapshots()
         .listen((snapshot) {
       _sharedMilestones = snapshot.docs
@@ -230,13 +247,20 @@ class SharedPregnancyProvider extends ChangeNotifier {
   // Real-time shared memories from Firestore
   List<SharedMemory> get sharedMemories => _sharedMemories;
 
-
   void _listenToSharedMemories() {
-    final uid = _userProvider?.uid;
-    if (uid == null) return;
-    _firestore
+    _memoriesSubscription?.cancel();
+    _memoriesSubscription = null;
+
+    final connectionId = _userProvider?.linkedConnectionId;
+    if (connectionId == null || connectionId.isEmpty) {
+      _sharedMemories = [];
+      return;
+    }
+    
+    _memoriesSubscription = _firestore
+        .collection('pregnancy_connections')
+        .doc(connectionId)
         .collection('shared_memories')
-        .where('motherId', isEqualTo: uid)
         .snapshots()
         .listen((snapshot) {
       _sharedMemories = snapshot.docs
@@ -246,11 +270,24 @@ class SharedPregnancyProvider extends ChangeNotifier {
     });
   }
 
+  @override
+  void dispose() {
+    _milestonesSubscription?.cancel();
+    _memoriesSubscription?.cancel();
+    super.dispose();
+  }
+
   // Helper to add a new shared memory (photo, note, etc.)
   Future<void> addSharedMemory(SharedMemory memory) async {
     final uid = _userProvider?.uid;
-    if (uid == null) return;
-    await _firestore.collection('shared_memories').add({
+    final connectionId = _userProvider?.linkedConnectionId;
+    if (uid == null || connectionId == null || connectionId.isEmpty) return;
+    
+    await _firestore
+        .collection('pregnancy_connections')
+        .doc(connectionId)
+        .collection('shared_memories')
+        .add({
       'motherId': uid,
       'type': memory.type,
       'content': memory.content,

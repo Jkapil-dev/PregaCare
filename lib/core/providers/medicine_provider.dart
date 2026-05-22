@@ -20,6 +20,10 @@ class MedicineProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  String? _cachedEffectiveUid;
+  bool _cachedHasPermission = false;
+  bool _cachedSharingAllowed = true;
+
   MedicineProvider() {
     _init();
   }
@@ -57,18 +61,16 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   void update(UserProvider userProvider) {
-    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
-    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
-
-    final oldHasPermission = _userProvider?.hasMedicinesPermission ?? false;
-    final newHasPermission = userProvider.hasMedicinesPermission;
-
-    final oldSharingAllowed = _userProvider?.motherNotificationSettings?['sharingSettings']?['medicineReminders'] ?? true;
-    final newSharingAllowed = userProvider.motherNotificationSettings?['sharingSettings']?['medicineReminders'] ?? true;
-
     _userProvider = userProvider;
 
-    if (oldEffectiveUid != newEffectiveUid || oldHasPermission != newHasPermission) {
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+    final newHasPermission = userProvider.hasMedicinesPermission;
+    final newSharingAllowed = userProvider.motherNotificationSettings?['sharingSettings']?['medicineReminders'] ?? true;
+
+    if (_cachedEffectiveUid != newEffectiveUid || _cachedHasPermission != newHasPermission) {
+      _cachedEffectiveUid = newEffectiveUid;
+      _cachedHasPermission = newHasPermission;
+
       if (newHasPermission && newEffectiveUid != null && newEffectiveUid.isNotEmpty) {
         loadMedicines();
       } else {
@@ -77,7 +79,8 @@ class MedicineProvider extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
       }
-    } else if (userProvider.isPartner && oldSharingAllowed != newSharingAllowed) {
+    } else if (userProvider.isPartner && _cachedSharingAllowed != newSharingAllowed) {
+      _cachedSharingAllowed = newSharingAllowed;
       _syncLocalNotifications();
     }
   }
@@ -145,11 +148,22 @@ class MedicineProvider extends ChangeNotifier {
 
     _unsubscribe();
 
-    final medicinesCollection = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('medicines')
-        .orderBy('createdAt', descending: true);
+    final bool isPartner = _userProvider?.isPartner ?? false;
+    final String? connectionId = _userProvider?.linkedConnectionId;
+    Query<Map<String, dynamic>> medicinesCollection;
+    if (isPartner && connectionId != null && connectionId.isNotEmpty) {
+      medicinesCollection = FirebaseFirestore.instance
+          .collection('pregnancy_connections')
+          .doc(connectionId)
+          .collection('shared_medicines')
+          .orderBy('createdAt', descending: true);
+    } else {
+      medicinesCollection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('medicines')
+          .orderBy('createdAt', descending: true);
+    }
 
     _medicinesSubscription = medicinesCollection.snapshots().listen((snapshot) {
       _medicines = snapshot.docs.map((doc) {
@@ -157,6 +171,21 @@ class MedicineProvider extends ChangeNotifier {
         data['id'] = doc.id;
         return Medicine.fromJson(data);
       }).toList();
+
+      // If this is the mother, defensively replicate to shared collection
+      if (!(_userProvider?.isPartner ?? false) && connectionId != null && connectionId.isNotEmpty) {
+        final batch = FirebaseFirestore.instance.batch();
+        for (final med in _medicines) {
+          final docRef = FirebaseFirestore.instance
+              .collection('pregnancy_connections')
+              .doc(connectionId)
+              .collection('shared_medicines')
+              .doc(med.id);
+          batch.set(docRef, med.toJson(), SetOptions(merge: true));
+        }
+        batch.commit().catchError((e) => debugPrint('MedicineProvider: Replication error $e'));
+      }
+
       _medicines = _medicines.where((m) => !m.id.contains('mock')).toList();
       _isLoading = false;
       _errorMessage = null;
@@ -208,8 +237,21 @@ class MedicineProvider extends ChangeNotifier {
 
       final updatedMedicine = medicine.copyWith(notificationIds: notificationIds);
 
-      // 3. Save to Firestore
+      // 3. Save to mother collection
       await _firestoreService.saveMedicine(uid, updatedMedicine);
+
+      // 4. Replicate to shared collection if mother has a connection
+      if (!(_userProvider?.isPartner ?? false)) {
+        final connectionId = _userProvider?.linkedConnectionId;
+        if (connectionId != null && connectionId.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('pregnancy_connections')
+              .doc(connectionId)
+              .collection('shared_medicines')
+              .doc(updatedMedicine.id)
+              .set(updatedMedicine.toJson(), SetOptions(merge: true));
+        }
+      }
       
       _errorMessage = null;
     } catch (e) {
@@ -239,8 +281,20 @@ class MedicineProvider extends ChangeNotifier {
         // 1. Cancel notifications
         await _notificationService.cancelNotifications(_medicines[index].notificationIds);
         
-        // 2. Delete from Firestore
+        // 2. Delete from mother collection
         await _firestoreService.deleteMedicine(uid, id);
+        // 3. Delete from shared collection if mother
+        if (!(_userProvider?.isPartner ?? false)) {
+          final connectionId = _userProvider?.linkedConnectionId;
+          if (connectionId != null && connectionId.isNotEmpty) {
+            await FirebaseFirestore.instance
+                .collection('pregnancy_connections')
+                .doc(connectionId)
+                .collection('shared_medicines')
+                .doc(id)
+                .delete();
+          }
+        }
       }
       _errorMessage = null;
     } catch (e) {
@@ -304,8 +358,21 @@ class MedicineProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Save changes to Firestore
+      // Save changes to mother collection
       await _firestoreService.updateAdherence(uid, medicineId, updatedLogs);
+      
+      // Replicate adherence updates to shared collection if mother
+      if (!(_userProvider?.isPartner ?? false)) {
+        final connectionId = _userProvider?.linkedConnectionId;
+        if (connectionId != null && connectionId.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('pregnancy_connections')
+              .doc(connectionId)
+              .collection('shared_medicines')
+              .doc(medicineId)
+              .update({'adherenceLogs': updatedLogs});
+        }
+      }
     } catch (e) {
       debugPrint('MedicineProvider updateAdherence remote save error: $e');
     }

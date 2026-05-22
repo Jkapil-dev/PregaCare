@@ -607,14 +607,20 @@ class UserProvider extends ChangeNotifier {
     _connectionData = null;
   }
 
-  void _listenToMotherProfile(String motherUid) {
+  void _listenToMotherProfile(String connectionId) {
     if (_motherDocSubscription != null) return;
-    _motherDocSubscription = _db.collection('users').doc(motherUid).snapshots().listen((docSnap) {
+    _motherDocSubscription = _db
+        .collection('pregnancy_connections')
+        .doc(connectionId)
+        .collection('shared_state')
+        .doc('current')
+        .snapshots()
+        .listen((docSnap) {
       if (docSnap.exists) {
         final data = docSnap.data();
         final oldSosActive = _motherProfile?['sosActive'] == true;
         _motherProfile = data;
-        debugPrint('UserProvider: Mother profile updated');
+        debugPrint('UserProvider: Replicated Mother profile updated from shared_state');
 
         final newSosActive = data?['sosActive'] == true;
         if (newSosActive != oldSosActive) {
@@ -641,18 +647,18 @@ class UserProvider extends ChangeNotifier {
     });
   }
 
-  void _listenToMotherNotificationSettings(String motherUid) {
+  void _listenToMotherNotificationSettings(String connectionId) {
     _motherNotificationSettingsSubscription?.cancel();
     _motherNotificationSettingsSubscription = _db
-        .collection('users')
-        .doc(motherUid)
-        .collection('notification_settings')
+        .collection('pregnancy_connections')
+        .doc(connectionId)
+        .collection('shared_reminders')
         .doc('settings')
         .snapshots()
         .listen((docSnap) {
       if (docSnap.exists) {
         _motherNotificationSettings = docSnap.data();
-        debugPrint('UserProvider: Mother notification settings updated: $_motherNotificationSettings');
+        debugPrint('UserProvider: Replicated Mother notification settings updated: $_motherNotificationSettings');
         notifyListeners();
       }
     }, onError: (e) {
@@ -700,16 +706,51 @@ class UserProvider extends ChangeNotifier {
           final motherUid = _profile?['linkedMotherUid'] as String?;
           final connectionId = _profile?['linkedConnectionId'] as String?;
 
-          if (role == 'partner' && motherUid != null && motherUid.isNotEmpty) {
-            EffectiveUidProvider.update(motherUid);
-            _listenToMotherProfile(motherUid);
-            _listenToMotherNotificationSettings(motherUid);
+          if (role == 'partner' && connectionId != null && connectionId.isNotEmpty) {
+            EffectiveUidProvider.update(motherUid ?? '');
+            _listenToMotherProfile(connectionId);
+            _listenToMotherNotificationSettings(connectionId);
           } else {
             EffectiveUidProvider.update(uid);
             await _cancelMotherSubscription();
             await _motherNotificationSettingsSubscription?.cancel();
             _motherNotificationSettingsSubscription = null;
             _motherNotificationSettings = null;
+          }
+
+          if (role == 'mother' && connectionId != null && connectionId.isNotEmpty) {
+            // Replicate mother profile defensively
+            final motherProfileData = _profile;
+            if (motherProfileData != null) {
+              unawaited(_db
+                  .collection('pregnancy_connections')
+                  .doc(connectionId)
+                  .collection('shared_state')
+                  .doc('current')
+                  .set(motherProfileData, SetOptions(merge: true))
+                  .then((_) => debugPrint('UserProvider: Mother profile replicated to shared_state'))
+                  .catchError((e) => debugPrint('UserProvider: Mother profile replication failed: $e')));
+            }
+
+            // Fetch and replicate notification settings
+            unawaited(_db
+                .collection('users')
+                .doc(uid)
+                .collection('notification_settings')
+                .doc('settings')
+                .get()
+                .then((settingsSnap) {
+                  if (settingsSnap.exists && settingsSnap.data() != null) {
+                    return _db
+                        .collection('pregnancy_connections')
+                        .doc(connectionId)
+                        .collection('shared_reminders')
+                        .doc('settings')
+                        .set(settingsSnap.data()!, SetOptions(merge: true))
+                        .then((_) => debugPrint('UserProvider: Mother notification settings replicated to shared_reminders'));
+                  }
+                })
+                .catchError((e) => debugPrint('UserProvider: Mother notification settings replication failed: $e')));
           }
 
           if (connectionId != null && connectionId.isNotEmpty) {

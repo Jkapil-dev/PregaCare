@@ -18,6 +18,10 @@ class AppointmentProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  String? _cachedEffectiveUid;
+  bool _cachedHasPermission = false;
+  bool _cachedSharingAllowed = true;
+
   AppointmentProvider() {
     _init();
   }
@@ -58,18 +62,16 @@ class AppointmentProvider extends ChangeNotifier {
   }
 
   void update(UserProvider userProvider) {
-    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
-    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
-
-    final oldHasPermission = _userProvider?.hasAppointmentsPermission ?? false;
-    final newHasPermission = userProvider.hasAppointmentsPermission;
-
-    final oldSharingAllowed = _userProvider?.motherNotificationSettings?['sharingSettings']?['appointmentReminders'] ?? true;
-    final newSharingAllowed = userProvider.motherNotificationSettings?['sharingSettings']?['appointmentReminders'] ?? true;
-
     _userProvider = userProvider;
 
-    if (oldEffectiveUid != newEffectiveUid || oldHasPermission != newHasPermission) {
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+    final newHasPermission = userProvider.hasAppointmentsPermission;
+    final newSharingAllowed = userProvider.motherNotificationSettings?['sharingSettings']?['appointmentReminders'] ?? true;
+
+    if (_cachedEffectiveUid != newEffectiveUid || _cachedHasPermission != newHasPermission) {
+      _cachedEffectiveUid = newEffectiveUid;
+      _cachedHasPermission = newHasPermission;
+
       if (newHasPermission && newEffectiveUid != null && newEffectiveUid.isNotEmpty) {
         _subscribeToAppointments(newEffectiveUid);
       } else {
@@ -78,7 +80,8 @@ class AppointmentProvider extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
       }
-    } else if (userProvider.isPartner && oldSharingAllowed != newSharingAllowed) {
+    } else if (userProvider.isPartner && _cachedSharingAllowed != newSharingAllowed) {
+      _cachedSharingAllowed = newSharingAllowed;
       _syncLocalNotifications();
     }
   }
@@ -115,13 +118,39 @@ class AppointmentProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final appointmentsCollection = FirebaseFirestore.instance
-        .collection('users')
-        .doc(targetUid)
-        .collection('appointments');
+    final bool isPartner = _userProvider?.isPartner ?? false;
+    final String? connectionId = _userProvider?.linkedConnectionId;
+    Query<Map<String, dynamic>> appointmentsCollection;
+
+    if (isPartner && connectionId != null && connectionId.isNotEmpty) {
+      appointmentsCollection = FirebaseFirestore.instance
+          .collection('pregnancy_connections')
+          .doc(connectionId)
+          .collection('shared_appointments');
+    } else {
+      appointmentsCollection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(targetUid)
+          .collection('appointments');
+    }
 
     _appointmentsSubscription = appointmentsCollection.snapshots().listen((snapshot) {
       _appointments = snapshot.docs.map((doc) => Consultation.fromJson(doc.data())).toList();
+
+      // Defensively replicate to shared collection if Mother
+      if (!isPartner && connectionId != null && connectionId.isNotEmpty) {
+        final batch = FirebaseFirestore.instance.batch();
+        for (final con in _appointments) {
+          final docRef = FirebaseFirestore.instance
+              .collection('pregnancy_connections')
+              .doc(connectionId)
+              .collection('shared_appointments')
+              .doc(con.id);
+          batch.set(docRef, con.toJson(), SetOptions(merge: true));
+        }
+        batch.commit().catchError((e) => debugPrint('AppointmentProvider: Replication error $e'));
+      }
+
       _appointments = _appointments.where((c) => !['con_1', 'con_2', 'con_3'].contains(c.id)).toList();
       _isLoading = false;
       _errorMessage = null;
@@ -145,7 +174,7 @@ class AppointmentProvider extends ChangeNotifier {
 
   Future<void> loadAppointments() async {
     final uid = _userProvider?.isPartner == true ? _userProvider?.linkedMotherUid : _userProvider?.uid;
-    if (uid != null && uid.isNotEmpty && (_userProvider?.hasAppointmentsPermission ?? true)) {
+    if (uid != null && uid.isNotEmpty) {
       _subscribeToAppointments(uid);
     }
   }
@@ -159,6 +188,17 @@ class AppointmentProvider extends ChangeNotifier {
 
     try {
       await _storageService.saveConsultation(appointment);
+
+      // Replicate to shared collection if Mother has connection
+      final connectionId = _userProvider?.linkedConnectionId;
+      if (connectionId != null && connectionId.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('pregnancy_connections')
+            .doc(connectionId)
+            .collection('shared_appointments')
+            .doc(appointment.id)
+            .set(appointment.toJson(), SetOptions(merge: true));
+      }
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('AppointmentProvider saveAppointment error: $e');
@@ -177,6 +217,17 @@ class AppointmentProvider extends ChangeNotifier {
 
     try {
       await _storageService.deleteConsultation(id);
+
+      // Delete from shared collection if Mother has connection
+      final connectionId = _userProvider?.linkedConnectionId;
+      if (connectionId != null && connectionId.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('pregnancy_connections')
+            .doc(connectionId)
+            .collection('shared_appointments')
+            .doc(id)
+            .delete();
+      }
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('AppointmentProvider deleteAppointment error: $e');

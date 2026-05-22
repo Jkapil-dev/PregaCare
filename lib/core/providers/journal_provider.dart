@@ -14,17 +14,19 @@ class JournalProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  String? _cachedEffectiveUid;
+
   JournalProvider() {
     _init();
   }
 
   void update(UserProvider userProvider) {
-    final oldEffectiveUid = _userProvider == null ? null : (_userProvider!.isPartner ? _userProvider!.linkedMotherUid : _userProvider!.uid);
-    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
-
     _userProvider = userProvider;
 
-    if (oldEffectiveUid != newEffectiveUid) {
+    final newEffectiveUid = userProvider.isPartner ? userProvider.linkedMotherUid : userProvider.uid;
+
+    if (_cachedEffectiveUid != newEffectiveUid) {
+      _cachedEffectiveUid = newEffectiveUid;
       loadJournals();
     }
   }
