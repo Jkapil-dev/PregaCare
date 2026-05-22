@@ -24,6 +24,7 @@ import '../../../../core/providers/medicine_provider.dart';
 import '../../../../core/providers/mood_provider.dart';
 import '../../../../core/providers/journal_provider.dart';
 import '../../../../core/providers/shared_pregnancy_provider.dart';
+import '../../../../core/providers/notification_provider.dart';
 
 
 /// Home Dashboard - the main hub of MaatriCare
@@ -78,8 +79,8 @@ class DashboardPage extends StatelessWidget {
               _buildQuickActions(context, trimester),
               const SizedBox(height: MaatriTheme.spacingLg),
               _buildDailyInsight(context, userProvider),
-              const SizedBox(height: MaatriTheme.spacingMd),
-              _buildAIRecommendation(context, userProvider),
+              const SizedBox(height: 16),
+              _buildWellnessReminder(context, userProvider),
               const SizedBox(height: MaatriTheme.spacingMd),
               _buildWeeklySummary(context, medProvider, userProvider, moodProvider, journalProvider),
               const SizedBox(height: MaatriTheme.spacingXl),
@@ -102,10 +103,31 @@ class DashboardPage extends StatelessWidget {
           ]),
         ),
         Row(children: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.search_rounded), color: MaatriColors.charcoal),
           Stack(children: [
-            IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_outlined), color: MaatriColors.charcoal),
-            Positioned(right: 10, top: 10, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: MaatriColors.coral, shape: BoxShape.circle))),
+            IconButton(
+              onPressed: () => context.push(AppRoutes.notifications), 
+              icon: const Icon(Icons.notifications_outlined), 
+              color: MaatriColors.charcoal
+            ),
+            Consumer<NotificationProvider>(
+              builder: (context, provider, _) {
+                if (provider.unreadCount > 0) {
+                  return Positioned(
+                    right: 10, 
+                    top: 10, 
+                    child: Container(
+                      width: 8, 
+                      height: 8, 
+                      decoration: const BoxDecoration(
+                        color: MaatriColors.coral, 
+                        shape: BoxShape.circle
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           ]),
         ]),
       ],
@@ -223,7 +245,7 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAIRecommendation(BuildContext context, UserProvider userProvider) {
+  Widget _buildWellnessReminder(BuildContext context, UserProvider userProvider) {
     final week = userProvider.pregnancyWeek;
     String recommendation = 'Ensure you are drinking at least 8-10 glasses of water daily.';
     if (week <= 12) {
@@ -235,16 +257,16 @@ class DashboardPage extends StatelessWidget {
     }
 
     return GlassCard(
-      onTap: () => context.go(AppRoutes.aiAssistant),
+      onTap: () => context.push(AppRoutes.healthTracking),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: MaatriColors.lavender.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(MaatriTheme.radiusMd)),
-          child: const Icon(Icons.auto_awesome_rounded, color: MaatriColors.lavenderDark, size: 22),
+          decoration: BoxDecoration(color: MaatriColors.teal.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(MaatriTheme.radiusMd)),
+          child: const Icon(Icons.favorite_rounded, color: MaatriColors.teal, size: 22),
         ),
         const SizedBox(width: MaatriTheme.spacingMd),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('AI Recommends', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.charcoal)),
+          Text('Daily Wellness', style: MaatriTypography.labelLarge.copyWith(color: MaatriColors.charcoal)),
           const SizedBox(height: 4),
           Text(recommendation, style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
         ])),

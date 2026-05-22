@@ -20,6 +20,7 @@ import 'core/providers/shared_pregnancy_provider.dart';
 import 'core/providers/vaccination_provider.dart';
 import 'core/providers/journal_provider.dart';
 import 'core/providers/tracker_provider.dart';
+import 'core/providers/notification_provider.dart';
 import 'package:go_router/go_router.dart';
 
 void main() async {
@@ -104,6 +105,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => LocationProvider()),
         ChangeNotifierProvider(create: (_) => ConnectionProvider()),
         ChangeNotifierProvider(create: (_) => PartnerProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: const MaatriCareApp(),
     ),

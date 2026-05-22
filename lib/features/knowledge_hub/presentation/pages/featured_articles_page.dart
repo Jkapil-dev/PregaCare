@@ -51,7 +51,10 @@ class FeaturedArticlesPage extends StatelessWidget {
               itemCount: articles.length,
               separatorBuilder: (context, index) => const SizedBox(height: 20),
               itemBuilder: (context, index) {
-                return _FeaturedVerticalCard(article: articles[index]);
+                return _FeaturedVerticalCard(
+                  key: ValueKey(articles[index].id), 
+                  article: articles[index]
+                );
               },
             ),
           );
@@ -80,7 +83,7 @@ class FeaturedArticlesPage extends StatelessWidget {
 class _FeaturedVerticalCard extends StatelessWidget {
   final KnowledgeArticle article;
 
-  const _FeaturedVerticalCard({required this.article});
+  const _FeaturedVerticalCard({super.key, required this.article});
 
   @override
   Widget build(BuildContext context) {

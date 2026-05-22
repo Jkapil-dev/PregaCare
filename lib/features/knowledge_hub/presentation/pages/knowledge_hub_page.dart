@@ -162,7 +162,7 @@ class KnowledgeHubPage extends StatelessWidget {
               itemCount: recommended.length,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                return _SearchResultCard(article: recommended[index]);
+                return _SearchResultCard(key: ValueKey(recommended[index].id), article: recommended[index]);
               },
             ),
           ]
@@ -182,7 +182,7 @@ class KnowledgeHubPage extends StatelessWidget {
           separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final article = results[index];
-            return _SearchResultCard(article: article);
+            return _SearchResultCard(key: ValueKey(article.id), article: article);
           },
         ),
       ],
@@ -261,7 +261,7 @@ class KnowledgeHubPage extends StatelessWidget {
             itemCount: articles.length,
             separatorBuilder: (context, index) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
-              return _FeaturedArticleCard(article: articles[index]);
+              return _FeaturedArticleCard(key: ValueKey(articles[index].id), article: articles[index]);
             },
           ),
         ),
@@ -443,7 +443,7 @@ class _CategoryCard extends StatelessWidget {
 class _FeaturedArticleCard extends StatelessWidget {
   final KnowledgeArticle article;
   
-  const _FeaturedArticleCard({required this.article});
+  const _FeaturedArticleCard({super.key, required this.article});
 
   @override
   Widget build(BuildContext context) {
@@ -657,7 +657,7 @@ class _WeeklyGuidanceTabsState extends State<_WeeklyGuidanceTabs> with SingleTic
                 );
               }
               
-              return _WeeklyGuidanceCard(article: article, isExpanded: true);
+              return _WeeklyGuidanceCard(key: ValueKey(article.id), article: article, isExpanded: true);
             },
           ),
         ),
@@ -670,7 +670,7 @@ class _WeeklyGuidanceCard extends StatelessWidget {
   final KnowledgeArticle article;
   final bool isExpanded;
 
-  const _WeeklyGuidanceCard({required this.article, this.isExpanded = false});
+  const _WeeklyGuidanceCard({super.key, required this.article, this.isExpanded = false});
 
   @override
   Widget build(BuildContext context) {
@@ -732,7 +732,7 @@ class _WeeklyGuidanceCard extends StatelessWidget {
 class _SearchResultCard extends StatelessWidget {
   final KnowledgeArticle article;
 
-  const _SearchResultCard({required this.article});
+  const _SearchResultCard({super.key, required this.article});
 
   @override
   Widget build(BuildContext context) {

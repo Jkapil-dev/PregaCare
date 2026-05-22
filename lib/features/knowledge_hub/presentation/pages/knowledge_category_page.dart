@@ -151,6 +151,7 @@ class KnowledgeCategoryPage extends StatelessWidget {
               alignment: WrapAlignment.start,
               children: articles.map((article) {
                 return SizedBox(
+                  key: ValueKey(article.id),
                   width: cardWidth,
                   child: _CategoryArticleCard(article: article, categoryColor: categoryColor),
                 );
@@ -191,7 +192,7 @@ class _CategoryArticleCard extends StatelessWidget {
   final KnowledgeArticle article;
   final Color categoryColor;
 
-  const _CategoryArticleCard({required this.article, required this.categoryColor});
+  const _CategoryArticleCard({super.key, required this.article, required this.categoryColor});
 
   @override
   Widget build(BuildContext context) {

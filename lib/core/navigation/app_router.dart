@@ -7,13 +7,13 @@ import '../../features/auth/presentation/pages/auth_page.dart';
 import '../../features/onboarding/presentation/pages/pregnancy_setup_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/tracker/tracker_home/presentation/pages/tracker_home_page.dart';
-import '../../features/ai_assistant/presentation/pages/ai_chat_page.dart';
 import '../../features/community/presentation/pages/community_page.dart';
 import '../../features/knowledge_hub/presentation/pages/knowledge_hub_page.dart';
 import '../../features/knowledge_hub/presentation/pages/knowledge_article_detail_page.dart';
 import '../../features/knowledge_hub/presentation/pages/knowledge_category_page.dart';
 import '../../features/knowledge_hub/presentation/pages/featured_articles_page.dart';
 import '../../features/knowledge_hub/domain/models/knowledge_article.dart';
+import '../../features/notifications/presentation/pages/notification_center_screen.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/emergency/presentation/pages/emergency_page.dart';
 import '../../features/shared_journey/presentation/pages/shared_journey_page.dart';
@@ -52,7 +52,6 @@ class AppRoutes {
   static const pregnancySetup = '/pregnancy-setup';
   static const home = '/home';
   static const tracking = '/tracking';
-  static const aiAssistant = '/ai';
   static const knowledgeHub = '/knowledge';
   static const knowledgeCategory = '/knowledge/category';
   static const articleDetail = '/knowledge/article';
@@ -61,6 +60,7 @@ class AppRoutes {
   static const profile = '/profile';
   static const emergency = '/emergency';
   static const timeline = '/timeline';
+  static const notifications = '/notifications';
 
   // Partner specific routes
   static const support = '/support';
@@ -174,7 +174,6 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
             location == AppRoutes.medicalInfo ||
             location == AppRoutes.sharingPermissions ||
             location == AppRoutes.notificationSharingSettings ||
-            location == AppRoutes.aiAssistant ||
             location == AppRoutes.community ||
             location == AppRoutes.pregnancySetup;
 
@@ -238,12 +237,6 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
             path: AppRoutes.tracking,
             pageBuilder: (context, state) => const NoTransitionPage(
               child: TrackerHomePage(),
-            ),
-          ),
-          GoRoute(
-            path: AppRoutes.aiAssistant,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: AiChatPage(),
             ),
           ),
           GoRoute(
@@ -329,6 +322,10 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
       GoRoute(
         path: AppRoutes.timeline,
         builder: (context, state) => const TimelinePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationCenterScreen(),
       ),
 
       // Tracker sub-module deep-link routes (Level 2 — pushed on top of shell)
