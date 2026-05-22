@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../theme/colors.dart';
 import '../theme/theme.dart';
+import 'responsive_widgets.dart';
 
 /// Glassmorphism-style card used throughout MaatriCare
 class GlassCard extends StatelessWidget {
@@ -157,11 +158,13 @@ class QuickActionTile extends StatelessWidget {
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: 8),
-            Text(
+            ResponsiveText(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: MaatriColors.darkGray,
+                    fontSize: 11,
                   ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -189,27 +192,12 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 20, color: iconColor ?? MaatriColors.coral),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-          ],
-        ),
-        if (actionText != null)
-          TextButton(
-            onPressed: onAction,
-            child: Text(actionText!),
-          ),
-      ],
+    return ResponsiveSectionHeader(
+      title: title,
+      actionText: actionText,
+      onAction: onAction,
+      icon: icon,
+      iconColor: iconColor,
     );
   }
 }

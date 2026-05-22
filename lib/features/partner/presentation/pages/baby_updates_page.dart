@@ -5,6 +5,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/providers/user_provider.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 
 class BabyUpdatesPage extends StatefulWidget {
   const BabyUpdatesPage({super.key});
@@ -281,8 +282,7 @@ class _BabyUpdatesPageState extends State<BabyUpdatesPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ResponsiveActionRow(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -316,8 +316,7 @@ class _BabyUpdatesPageState extends State<BabyUpdatesPage> {
                 const SizedBox(height: MaatriTheme.spacingLg),
                 Divider(color: Colors.white.withOpacity( 0.3)),
                 const SizedBox(height: MaatriTheme.spacingMd),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                ResponsiveActionRow(
                   children: [
                     _buildStatDetail(Icons.fitness_center_rounded, 'Weight', weight),
                     _buildStatDetail(Icons.straighten_rounded, 'Length', length),

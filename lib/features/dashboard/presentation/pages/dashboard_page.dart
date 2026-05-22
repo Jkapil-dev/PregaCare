@@ -8,6 +8,8 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
+import '../../../../core/widgets/sos_floating_button.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/providers/connection_provider.dart';
 import '../../../../providers/auth_provider.dart';
@@ -91,13 +93,14 @@ class DashboardPage extends StatelessWidget {
   Widget _buildGreeting(BuildContext context, String displayName) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return ResponsiveActionRow(
       children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('$greeting,', style: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.slate)),
-          Text(displayName, style: MaatriTypography.headlineLarge.copyWith(color: MaatriColors.charcoal)),
-        ]),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('$greeting,', style: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.slate)),
+            ResponsiveText(displayName, style: MaatriTypography.headlineLarge.copyWith(color: MaatriColors.charcoal)),
+          ]),
+        ),
         Row(children: [
           IconButton(onPressed: () {}, icon: const Icon(Icons.search_rounded), color: MaatriColors.charcoal),
           Stack(children: [
@@ -143,7 +146,7 @@ class DashboardPage extends StatelessWidget {
         const SizedBox(width: MaatriTheme.spacingMd),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Next Appointment', style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.slate)),
-          Text('$doctorNameText · $subtitleText', style: MaatriTypography.titleMedium),
+          ResponsiveText('$doctorNameText · $subtitleText', style: MaatriTypography.titleMedium),
         ])),
         const Icon(Icons.chevron_right_rounded, color: MaatriColors.mediumGray),
       ]),
@@ -171,27 +174,33 @@ class DashboardPage extends StatelessWidget {
     final IconData healthIcon = isThirdTrimester ? Icons.child_care_rounded : Icons.monitor_weight_rounded;
     final String healthRoute = isThirdTrimester ? AppRoutes.babyMonitoring : AppRoutes.healthTracking;
 
-    return Row(children: [
-      Expanded(child: QuickActionTile(
-        icon: Icons.medication_rounded, label: 'Medications', color: MaatriColors.coral,
-        onTap: () => context.push(AppRoutes.medicationCare),
-      )),
-      const SizedBox(width: MaatriTheme.spacingSm),
-      Expanded(child: QuickActionTile(
-        icon: healthIcon, label: healthLabel, color: MaatriColors.teal,
-        onTap: () => context.push(healthRoute),
-      )),
-      const SizedBox(width: MaatriTheme.spacingSm),
-      Expanded(child: QuickActionTile(
-        icon: Icons.edit_note_rounded, label: 'Journal', color: MaatriColors.goldenAmber,
-        onTap: () => context.push(AppRoutes.emotionalWellness),
-      )),
-      const SizedBox(width: MaatriTheme.spacingSm),
-      Expanded(child: QuickActionTile(
-        icon: Icons.document_scanner_rounded, label: 'Records', color: MaatriColors.lavenderDark,
-        onTap: () => context.push(AppRoutes.recordsDocuments),
-      )),
-    ]);
+    return LayoutBuilder(builder: (context, constraints) {
+      final double itemWidth = constraints.maxWidth < 350 ? constraints.maxWidth : (constraints.maxWidth - (MaatriTheme.spacingSm * 3)) / 4;
+      
+      if (itemWidth < 75) {
+        // Break into 2x2 grid if extremely narrow
+        final itemWidth2 = (constraints.maxWidth - MaatriTheme.spacingSm) / 2;
+        return Wrap(
+          spacing: MaatriTheme.spacingSm,
+          runSpacing: MaatriTheme.spacingSm,
+          children: [
+            SizedBox(width: itemWidth2, child: QuickActionTile(icon: Icons.medication_rounded, label: 'Medications', color: MaatriColors.coral, onTap: () => context.push(AppRoutes.medicationCare))),
+            SizedBox(width: itemWidth2, child: QuickActionTile(icon: healthIcon, label: healthLabel, color: MaatriColors.teal, onTap: () => context.push(healthRoute))),
+            SizedBox(width: itemWidth2, child: QuickActionTile(icon: Icons.edit_note_rounded, label: 'Journal', color: MaatriColors.goldenAmber, onTap: () => context.push(AppRoutes.emotionalWellness))),
+            SizedBox(width: itemWidth2, child: QuickActionTile(icon: Icons.document_scanner_rounded, label: 'Records', color: MaatriColors.lavenderDark, onTap: () => context.push(AppRoutes.recordsDocuments))),
+          ],
+        );
+      }
+      return Row(children: [
+        Expanded(child: QuickActionTile(icon: Icons.medication_rounded, label: 'Medications', color: MaatriColors.coral, onTap: () => context.push(AppRoutes.medicationCare))),
+        const SizedBox(width: MaatriTheme.spacingSm),
+        Expanded(child: QuickActionTile(icon: healthIcon, label: healthLabel, color: MaatriColors.teal, onTap: () => context.push(healthRoute))),
+        const SizedBox(width: MaatriTheme.spacingSm),
+        Expanded(child: QuickActionTile(icon: Icons.edit_note_rounded, label: 'Journal', color: MaatriColors.goldenAmber, onTap: () => context.push(AppRoutes.emotionalWellness))),
+        const SizedBox(width: MaatriTheme.spacingSm),
+        Expanded(child: QuickActionTile(icon: Icons.document_scanner_rounded, label: 'Records', color: MaatriColors.lavenderDark, onTap: () => context.push(AppRoutes.recordsDocuments))),
+      ]);
+    });
   }
 
   Widget _buildDailyInsight(BuildContext context, UserProvider userProvider) {
@@ -616,8 +625,7 @@ class DashboardPage extends StatelessWidget {
   Widget _buildPartnerGreeting(BuildContext context, String partnerName, String motherName) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return ResponsiveActionRow(
       children: [
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('$greeting,', style: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.slate)),
@@ -812,7 +820,7 @@ class DashboardPage extends StatelessWidget {
         const SizedBox(width: MaatriTheme.spacingMd),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Next Appointment', style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.slate)),
-          Text('$doctorNameText · $subtitleText', style: MaatriTypography.titleMedium),
+          ResponsiveText('$doctorNameText · $subtitleText', style: MaatriTypography.titleMedium),
         ])),
         if (nextAppt != null) const Icon(Icons.info_outline_rounded, color: MaatriColors.mediumGray),
       ]),

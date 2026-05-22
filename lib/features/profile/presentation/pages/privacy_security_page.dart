@@ -6,6 +6,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/providers/user_provider.dart';
 import '../../../../providers/auth_provider.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 
 class PrivacySecurityPage extends StatefulWidget {
   const PrivacySecurityPage({super.key});
@@ -169,7 +170,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
         foregroundColor: MaatriColors.charcoal,
       ),
       body: SafeArea(
-        child: Stack(
+        child: ResponsivePageWrapper(
+          child: Stack(
           children: [
             SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -299,6 +301,7 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

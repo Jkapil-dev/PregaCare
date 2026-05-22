@@ -5,6 +5,7 @@ import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
+import 'package:maatricare/core/widgets/responsive_widgets.dart';
 import 'package:maatricare/core/providers/user_provider.dart';
 
 class BabyMonitoringPage extends StatefulWidget {
@@ -121,8 +122,9 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+      body: ResponsivePageWrapper(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(MaatriTheme.spacingMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -144,6 +146,7 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
             const SizedBox(height: MaatriTheme.spacingXxl),
           ],
         ),
+      ),
       ),
     );
   }
@@ -220,11 +223,11 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
           else
             Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ResponsiveActionRow(
+                  alignment: WrapAlignment.spaceBetween,
                   children: [
-                    Text('Session Time: ${_formatDuration(_kickSeconds)}', style: MaatriTypography.labelLarge),
-                    Text('$_kickCount / 10 kicks', style: MaatriTypography.titleMedium.copyWith(color: MaatriColors.teal)),
+                    ResponsiveText('Session Time: ${_formatDuration(_kickSeconds)}', style: MaatriTypography.labelLarge),
+                    ResponsiveText('$_kickCount / 10 kicks', style: MaatriTypography.titleMedium.copyWith(color: MaatriColors.teal)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -326,11 +329,11 @@ class _BabyMonitoringPageState extends State<BabyMonitoringPage> {
             const SizedBox(height: 6),
             ...contractionLogs.take(3).map((log) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: ResponsiveActionRow(
+                alignment: WrapAlignment.spaceBetween,
                 children: [
-                  Text('Duration: ${log['durationSeconds']}s', style: MaatriTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                  Text('Freq: ${log['frequency']}', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
+                  ResponsiveText('Duration: ${log['durationSeconds']}s', style: MaatriTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                  ResponsiveText('Freq: ${log['frequency']}', style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
                 ],
               ),
             )),

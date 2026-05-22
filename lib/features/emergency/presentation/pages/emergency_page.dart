@@ -13,7 +13,8 @@ import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/providers/emergency_provider.dart';
 import '../../../../core/providers/location_provider.dart';
-import '../../../../core/providers/user_provider.dart';
+import 'package:maatricare/core/providers/user_provider.dart';
+import 'package:maatricare/core/widgets/responsive_widgets.dart';
 import '../../../../core/models/emergency_contact.dart';
 import '../../../../core/models/medical_emergency_info.dart';
 import '../../../../core/models/hospital.dart';
@@ -472,10 +473,11 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ResponsiveActionRow(
+            alignment: WrapAlignment.spaceBetween,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.assignment_ind_rounded, color: MaatriColors.teal, size: 22),
                   const SizedBox(width: 8),
@@ -665,15 +667,19 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: MaatriColors.lavenderLight,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        contact.relationship,
-                        style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.lavenderDark, fontSize: 10),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: MaatriColors.lavenderLight,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          contact.relationship,
+                          style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.lavenderDark, fontSize: 10),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ],
@@ -687,7 +693,14 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                       children: [
                         const Icon(Icons.emergency_outlined, size: 10, color: MaatriColors.danger),
                         const SizedBox(width: 2),
-                        Text('SOS Recipient Enabled', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.danger, fontSize: 9)),
+                        Flexible(
+                          child: Text(
+                            'SOS Recipient Enabled', 
+                            style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.danger, fontSize: 9),
+                            maxLines: 1, 
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -696,20 +709,25 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
           ),
 
           // Actions
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               IconButton(
                 icon: const Icon(Icons.phone_rounded, color: MaatriColors.successDark, size: 20),
                 onPressed: () => launchUrl(Uri.parse('tel:${contact.phone}')),
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.all(6),
               ),
               IconButton(
                 icon: const Icon(Icons.sms_rounded, color: MaatriColors.teal, size: 20),
                 onPressed: () => launchUrl(Uri.parse('sms:${contact.phone}')),
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.all(6),
               ),
               if (!Provider.of<UserProvider>(context).isPartner)
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, color: MaatriColors.darkGray),
+                  icon: const Icon(Icons.more_vert_rounded, color: MaatriColors.darkGray, size: 20),
+                  padding: EdgeInsets.zero,
                   onSelected: (action) {
                     if (action == 'edit') {
                       _showAddEditContactDialog(context, emp, contact);
@@ -799,12 +817,12 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
         ],
 
         // 2. Location-Aware Nearby Hospitals
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ResponsiveActionRow(
+          alignment: WrapAlignment.spaceBetween,
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 4.0, bottom: 6.0),
-              child: Text(
+              child: ResponsiveText(
                 isLocationLoaded ? 'Nearby Hospitals (Location-Aware)' : 'Nearby Hospitals (Estimated)',
                 style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.charcoal),
               ),
@@ -854,9 +872,9 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(h.name, style: MaatriTypography.titleSmall.copyWith(fontWeight: FontWeight.bold)),
+                    Text(h.name, style: MaatriTypography.titleSmall.copyWith(fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    Text(h.address, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate)),
+                    Text(h.address, style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -877,35 +895,38 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
               )
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (h.maternitySupport)
                 Container(
-                  margin: const EdgeInsets.only(right: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   decoration: BoxDecoration(color: MaatriColors.successLight, borderRadius: BorderRadius.circular(4)),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.child_care_rounded, color: MaatriColors.successDark, size: 10),
-                      const SizedBox(width: 2),
-                      Text('Maternity Support', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.successDark, fontSize: 9)),
+                      const Icon(Icons.child_care_rounded, color: MaatriColors.successDark, size: 12),
+                      const SizedBox(width: 4),
+                      Text('Maternity Support', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.successDark, fontSize: 10)),
                     ],
                   ),
                 ),
               if (h.emergencyAvailability)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   decoration: BoxDecoration(color: MaatriColors.dangerLight, borderRadius: BorderRadius.circular(4)),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.emergency_rounded, color: MaatriColors.danger, size: 10),
-                      const SizedBox(width: 2),
-                      Text('24/7 ER Available', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.dangerDark, fontSize: 9)),
+                      const Icon(Icons.emergency_rounded, color: MaatriColors.danger, size: 12),
+                      const SizedBox(width: 4),
+                      Text('24/7 ER Available', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.dangerDark, fontSize: 10)),
                     ],
                   ),
                 ),
-              const Spacer(),
               ElevatedButton.icon(
                 onPressed: () => launchUrl(Uri.parse('tel:${h.phone}')),
                 style: ElevatedButton.styleFrom(
@@ -919,7 +940,6 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
                 icon: const Icon(Icons.phone, size: 12),
                 label: const Text('Call', style: TextStyle(fontSize: 10)),
               ),
-              const SizedBox(width: 6),
               ElevatedButton.icon(
                 onPressed: () {
                   final mapsUrl = 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent("${h.name} ${h.address}")}';
@@ -1696,8 +1716,10 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
           ),
           const SizedBox(height: 16),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 8,
             children: [
               Text(
                 'GPS TRACKING AND COORDINATES',
@@ -2110,7 +2132,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
         const SizedBox(height: MaatriTheme.spacingSm),
         LayoutBuilder(
           builder: (context, constraints) {
-            final cardWidth = (constraints.maxWidth - 12) / 2;
+            final double cardWidth = constraints.maxWidth < 340 ? constraints.maxWidth : (constraints.maxWidth - 12) / 2;
             return Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -2191,7 +2213,7 @@ class _EmergencyPageState extends State<EmergencyPage> with SingleTickerProvider
         const SizedBox(height: MaatriTheme.spacingSm),
         LayoutBuilder(
           builder: (context, constraints) {
-            final cardWidth = (constraints.maxWidth - 12) / 2;
+            final double cardWidth = constraints.maxWidth < 340 ? constraints.maxWidth : (constraints.maxWidth - 12) / 2;
             return Wrap(
               spacing: 12,
               runSpacing: 12,

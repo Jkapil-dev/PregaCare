@@ -7,6 +7,7 @@ import 'package:maatricare/core/widgets/common_widgets.dart';
 import 'package:maatricare/core/providers/user_provider.dart';
 import 'package:maatricare/core/providers/medicine_provider.dart';
 import 'package:maatricare/core/providers/mood_provider.dart';
+import 'package:maatricare/core/widgets/responsive_widgets.dart';
 
 class InsightsHistoryPage extends StatelessWidget {
   const InsightsHistoryPage({super.key});
@@ -26,8 +27,9 @@ class InsightsHistoryPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+      body: ResponsivePageWrapper(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(MaatriTheme.spacingMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -53,6 +55,7 @@ class InsightsHistoryPage extends StatelessWidget {
             const SizedBox(height: MaatriTheme.spacingXxl),
           ],
         ),
+      ),
       ),
     );
   }
@@ -211,11 +214,11 @@ class InsightsHistoryPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ResponsiveActionRow(
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              Text(symptom, style: MaatriTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
-              Text('$daysCount days/wk', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.slate)),
+              ResponsiveText(symptom, style: MaatriTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+              ResponsiveText('$daysCount days/wk', style: MaatriTypography.labelSmall.copyWith(color: MaatriColors.slate)),
             ],
           ),
           const SizedBox(height: 4),
@@ -275,8 +278,8 @@ class InsightsHistoryPage extends StatelessWidget {
               ),
             )
           else ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            ResponsiveActionRow(
+              alignment: WrapAlignment.spaceAround,
               children: sorted.take(3).map((e) {
                 final pct = ((e.value / divisor) * 100).toStringAsFixed(0);
                 return _buildMoodShare(e.key, '$pct%');

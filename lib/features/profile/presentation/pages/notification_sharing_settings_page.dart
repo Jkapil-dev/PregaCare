@@ -5,6 +5,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 import '../../../../core/providers/user_provider.dart';
 
 class NotificationSharingSettingsPage extends StatefulWidget {
@@ -157,10 +158,11 @@ class _NotificationSharingSettingsPageState extends State<NotificationSharingSet
         foregroundColor: MaatriColors.charcoal,
       ),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: MaatriColors.coral))
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+        child: ResponsivePageWrapper(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: MaatriColors.coral))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -231,6 +233,7 @@ class _NotificationSharingSettingsPageState extends State<NotificationSharingSet
                   ],
                 ),
               ),
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
+import 'package:maatricare/core/widgets/responsive_widgets.dart';
 
 // Models
 import 'package:maatricare/core/models/medicine.dart';
@@ -88,10 +89,11 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: showSpinner
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+      body: ResponsivePageWrapper(
+        child: showSpinner
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(MaatriTheme.spacingMd),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -120,6 +122,7 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                 ],
               ),
             ),
+      ),
     );
   }
 
@@ -226,10 +229,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ResponsiveActionRow(
+          alignment: WrapAlignment.spaceBetween,
           children: [
-            Text('Active Medications', style: MaatriTypography.titleMedium),
+            ResponsiveText('Active Medications', style: MaatriTypography.titleMedium),
             if (!isPartner)
               ElevatedButton.icon(
                 onPressed: () => _showMedDialog(null),
@@ -437,10 +440,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ResponsiveActionRow(
+          alignment: WrapAlignment.spaceBetween,
           children: [
-            Text('Maternal Immunizations', style: MaatriTypography.titleMedium),
+            ResponsiveText('Maternal Immunizations', style: MaatriTypography.titleMedium),
             if (!isPartner)
               ElevatedButton.icon(
                 onPressed: () => _showVaccineDialog(null),
@@ -605,10 +608,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ResponsiveActionRow(
+          alignment: WrapAlignment.spaceBetween,
           children: [
-            Text('Antenatal Consultations', style: MaatriTypography.titleMedium),
+            ResponsiveText('Antenatal Consultations', style: MaatriTypography.titleMedium),
             if (!isPartner)
               ElevatedButton.icon(
                 onPressed: () => _showConsultationDialog(null),
@@ -927,10 +930,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ResponsiveActionRow(
+                    alignment: WrapAlignment.spaceBetween,
                     children: [
-                      Text('Reminders Enabled', style: MaatriTypography.labelLarge),
+                      ResponsiveText('Reminders Enabled', style: MaatriTypography.labelLarge),
                       Switch(
                         value: reminderEnabled, 
                         activeColor: MaatriColors.teal,
@@ -1117,10 +1120,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                 ),
                 const SizedBox(height: 16),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ResponsiveActionRow(
+                  alignment: WrapAlignment.spaceBetween,
                   children: [
-                    Text('Reminder Alert 1 Day Before', style: MaatriTypography.labelLarge),
+                    ResponsiveText('Reminder Alert 1 Day Before', style: MaatriTypography.labelLarge),
                     Switch(
                       value: reminderEnabled,
                       activeColor: MaatriColors.teal,
@@ -1296,10 +1299,10 @@ class _MedicationCarePageState extends State<MedicationCarePage> {
                 ),
                 const SizedBox(height: 16),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ResponsiveActionRow(
+                  alignment: WrapAlignment.spaceBetween,
                   children: [
-                    Text('Reminder Alert 1 Day Before', style: MaatriTypography.labelLarge),
+                    ResponsiveText('Reminder Alert 1 Day Before', style: MaatriTypography.labelLarge),
                     Switch(
                       value: reminderEnabled,
                       activeColor: MaatriColors.teal,

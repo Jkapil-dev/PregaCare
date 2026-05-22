@@ -6,10 +6,12 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../core/providers/user_provider.dart';
 import '../../../../core/providers/appointment_provider.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -55,8 +57,9 @@ class ProfilePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: MaatriColors.warmCream,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+        child: ResponsivePageWrapper(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               const SizedBox(height: 16),
@@ -83,26 +86,28 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
+                    ResponsiveText(
                       displayName,
                       style: MaatriTypography.headlineMedium.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    ResponsiveText(
                       _getPregnancySubtitle(userProvider.pregnancyWeek, userProvider.dueDateString),
                       style: MaatriTypography.bodyMedium.copyWith(color: Colors.white.withOpacity(0.95)),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    ResponsiveActionRow(
+                      alignment: WrapAlignment.center,
+                      spacing: 16,
+                      runSpacing: 8,
                       children: [
                         _StatBadge(label: 'BP Logs', value: '${userProvider.bpHistory.length}'),
-                        const SizedBox(width: 16),
                         _StatBadge(label: 'ANC Visits', value: '${apptProvider.appointments.length}'),
-                        const SizedBox(width: 16),
                         _StatBadge(label: 'Streak', value: '${userProvider.streak}d'),
                       ],
                     ),
@@ -225,6 +230,7 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -296,11 +302,12 @@ class _MenuItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: MaatriTypography.titleSmall),
+                ResponsiveText(title, style: MaatriTypography.titleSmall),
                 const SizedBox(height: 2),
-                Text(
+                ResponsiveText(
                   subtitle,
                   style: MaatriTypography.bodySmall.copyWith(color: MaatriColors.slate),
+                  maxLines: 2,
                 ),
               ],
             ),

@@ -5,6 +5,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/providers/user_provider.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 
 class PersonalInfoPage extends StatefulWidget {
   const PersonalInfoPage({super.key});
@@ -102,7 +103,8 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
         foregroundColor: MaatriColors.charcoal,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: ResponsivePageWrapper(
+          child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
@@ -264,6 +266,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

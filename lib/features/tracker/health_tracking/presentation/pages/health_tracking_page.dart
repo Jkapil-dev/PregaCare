@@ -4,6 +4,7 @@ import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
+import 'package:maatricare/core/widgets/responsive_widgets.dart';
 import 'package:maatricare/core/providers/user_provider.dart';
 
 class HealthTrackingPage extends StatefulWidget {
@@ -51,8 +52,9 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+      body: ResponsivePageWrapper(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(MaatriTheme.spacingMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -82,6 +84,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             const SizedBox(height: MaatriTheme.spacingXxl),
           ],
         ),
+      ),
       ),
     );
   }
@@ -157,10 +160,10 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             const SizedBox(height: 4),
             ...userProvider.bpHistory.take(2).map((log) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: ResponsiveActionRow(
+                alignment: WrapAlignment.spaceBetween,
                 children: [
-                  Text(log, style: MaatriTypography.bodySmall),
+                  ResponsiveText(log, style: MaatriTypography.bodySmall),
                   const Icon(Icons.check_circle_rounded, color: MaatriColors.success, size: 14),
                 ],
               ),
@@ -330,8 +333,8 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ResponsiveActionRow(
+            alignment: WrapAlignment.spaceBetween,
             children: [
               ElevatedButton(
                 onPressed: () {
@@ -341,7 +344,7 @@ class _HealthTrackingPageState extends State<HealthTrackingPage> {
                 style: ElevatedButton.styleFrom(backgroundColor: MaatriColors.lightGray, foregroundColor: MaatriColors.charcoal),
                 child: const Icon(Icons.remove, size: 16),
               ),
-              Text(
+              ResponsiveText(
                 temp == 0.0 ? 'Log today\'s temperature' : (temp > 37.5 ? 'Slight Fever ⚠️' : 'Normal Temp ✓'),
                 style: MaatriTypography.bodyMedium.copyWith(
                   color: temp == 0.0 ? MaatriColors.slate : (temp > 37.5 ? MaatriColors.danger : MaatriColors.success),

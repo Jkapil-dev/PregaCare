@@ -5,6 +5,7 @@ import 'package:maatricare/core/theme/colors.dart';
 import 'package:maatricare/core/theme/typography.dart';
 import 'package:maatricare/core/theme/theme.dart';
 import 'package:maatricare/core/widgets/common_widgets.dart';
+import 'package:maatricare/core/widgets/responsive_widgets.dart';
 
 // Models
 import 'package:maatricare/core/models/journal_entry.dart';
@@ -74,10 +75,11 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(MaatriTheme.spacingMd),
+      body: ResponsivePageWrapper(
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(MaatriTheme.spacingMd),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -95,10 +97,10 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                   const SizedBox(height: MaatriTheme.spacingMd),
 
                   // ── JOURNAL HEADER ──
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ResponsiveActionRow(
+                    alignment: WrapAlignment.spaceBetween,
                     children: [
-                      Text('Pregnancy Journal & Notes', style: MaatriTypography.titleMedium),
+                      ResponsiveText('Pregnancy Journal & Notes', style: MaatriTypography.titleMedium),
                       FilterChip(
                         label: Row(
                           children: [
@@ -196,6 +198,7 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                 ],
               ),
             ),
+      ),
     );
   }
 
@@ -221,8 +224,8 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          ResponsiveActionRow(
+            alignment: WrapAlignment.spaceAround,
             children: _moodOptions.map((mood) {
               final isTodayMood = todayEntry?.mood == '${mood.$2} ${mood.$1}';
               return GestureDetector(
@@ -505,10 +508,10 @@ class _EmotionalWellnessPageState extends State<EmotionalWellnessPage> {
                 const SizedBox(height: 16),
 
                 // Bookmark toggle
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ResponsiveActionRow(
+                  alignment: WrapAlignment.spaceBetween,
                   children: [
-                    Text('Bookmark as Memory', style: MaatriTypography.labelLarge),
+                    ResponsiveText('Bookmark as Memory', style: MaatriTypography.labelLarge),
                     IconButton(
                       icon: Icon(
                         isBookmarked ? Icons.star_rounded : Icons.star_outline_rounded,

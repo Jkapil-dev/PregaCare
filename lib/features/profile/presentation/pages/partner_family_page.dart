@@ -11,6 +11,7 @@ import '../../../../core/navigation/app_router.dart';
 import '../../../../core/providers/user_provider.dart';
 import '../../../../core/providers/connection_provider.dart';
 import '../../../../core/providers/partner_provider.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 
 class PartnerFamilyPage extends StatefulWidget {
   const PartnerFamilyPage({super.key});
@@ -196,7 +197,8 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
         foregroundColor: MaatriColors.charcoal,
       ),
       body: SafeArea(
-        child: Stack(
+        child: ResponsivePageWrapper(
+          child: Stack(
           children: [
             if (isMainLoading)
               const Center(child: CircularProgressIndicator(color: MaatriColors.coral))
@@ -225,8 +227,9 @@ class _PartnerFamilyPageState extends State<PartnerFamilyPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildIntroSection() {
     return Container(

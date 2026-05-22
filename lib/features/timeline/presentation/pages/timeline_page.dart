@@ -5,6 +5,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/providers/user_provider.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 
 class TimelinePage extends StatelessWidget {
   const TimelinePage({super.key});
@@ -41,8 +42,8 @@ class TimelinePage extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: isCurrent ? null : MaatriColors.pureWhite, gradient: isCurrent ? MaatriColors.primaryGradient : null, borderRadius: BorderRadius.circular(14), boxShadow: isCurrent ? MaatriTheme.glowCoral : MaatriTheme.shadowSm),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Week $week', style: MaatriTypography.titleMedium.copyWith(color: isCurrent ? Colors.white : MaatriColors.charcoal, fontWeight: FontWeight.w700)),
+          ResponsiveActionRow(children: [
+            ResponsiveText('Week $week', style: MaatriTypography.titleMedium.copyWith(color: isCurrent ? Colors.white : MaatriColors.charcoal, fontWeight: FontWeight.w700)),
             Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: isCurrent ? Colors.white.withOpacity( 0.2) : MaatriColors.cloudGray, borderRadius: BorderRadius.circular(999)),
               child: Text('T$trimester', style: MaatriTypography.labelSmall.copyWith(color: isCurrent ? Colors.white : MaatriColors.slate))),
           ]),

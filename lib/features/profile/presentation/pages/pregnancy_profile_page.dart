@@ -5,6 +5,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 import '../../../../core/providers/user_provider.dart';
 
 class PregnancyProfilePage extends StatefulWidget {
@@ -175,8 +176,9 @@ class _PregnancyProfilePageState extends State<PregnancyProfilePage> {
         foregroundColor: MaatriColors.charcoal,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+        child: ResponsivePageWrapper(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -199,8 +201,8 @@ class _PregnancyProfilePageState extends State<PregnancyProfilePage> {
                         style: MaatriTypography.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      ResponsiveActionRow(
+                        alignment: WrapAlignment.spaceBetween,
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,8 +235,8 @@ class _PregnancyProfilePageState extends State<PregnancyProfilePage> {
                         ],
                       ),
                       const Divider(color: Colors.white24, height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      ResponsiveActionRow(
+                        alignment: WrapAlignment.spaceBetween,
                         children: [
                           Text(
                             'Estimated Due Date:',
@@ -341,8 +343,8 @@ class _PregnancyProfilePageState extends State<PregnancyProfilePage> {
                         ),
                       ),
                       const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      ResponsiveActionRow(
+                        alignment: WrapAlignment.spaceBetween,
                         children: [
                           const Text('First Pregnancy?'),
                           Switch(
@@ -361,8 +363,8 @@ class _PregnancyProfilePageState extends State<PregnancyProfilePage> {
                       ),
                       if (!_isFirstPregnancy) ...[
                         const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        ResponsiveActionRow(
+                          alignment: WrapAlignment.spaceBetween,
                           children: [
                             const Text('Pregnancy Number'),
                             DropdownButton<int>(
@@ -419,6 +421,7 @@ class _PregnancyProfilePageState extends State<PregnancyProfilePage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

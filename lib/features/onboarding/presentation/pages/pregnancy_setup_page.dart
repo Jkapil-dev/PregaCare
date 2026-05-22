@@ -10,6 +10,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 
 /// 5-step pregnancy setup flow with personal info
 class PregnancySetupPage extends StatefulWidget {
@@ -588,8 +589,7 @@ class _PregnancySetupPageState extends State<PregnancySetupPage> {
   Widget _buildSummaryRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: ResponsiveActionRow(
         children: [
           Text(label, style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.slate)),
           Text(value, style: MaatriTypography.titleSmall),

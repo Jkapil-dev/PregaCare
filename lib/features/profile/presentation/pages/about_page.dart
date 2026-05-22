@@ -3,6 +3,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/widgets/responsive_widgets.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -18,7 +19,8 @@ class AboutPage extends StatelessWidget {
         foregroundColor: MaatriColors.charcoal,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: ResponsivePageWrapper(
+          child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,6 +154,7 @@ class AboutPage extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
