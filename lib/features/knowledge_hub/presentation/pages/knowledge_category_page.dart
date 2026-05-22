@@ -222,12 +222,19 @@ class _CategoryArticleCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: article.imageUrl.isNotEmpty
-                    ? Image.network(
-                        article.imageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-                      )
+                    ? (article.imageUrl.startsWith('assets/')
+                        ? Image.asset(
+                            article.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                          )
+                        : Image.network(
+                            article.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                          ))
                     : _buildPlaceholder(),
               ),
             ),

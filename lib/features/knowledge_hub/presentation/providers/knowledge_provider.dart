@@ -156,15 +156,16 @@ class KnowledgeProvider extends ChangeNotifier {
     // Split into tokens
     final tokens = lowercaseQuery.split(RegExp(r'\s+'));
 
-    // Synonym dictionary
+    // Expanded Synonym dictionary
     final synonyms = {
-      'nausea': ['morning sickness', 'vomiting', 'sick'],
-      'swelling': ['edema', 'puffiness', 'bloating'],
-      'water': ['hydration', 'fluids', 'drinking'],
-      'stress': ['anxiety', 'mental', 'worry', 'emotional'],
-      'pain': ['cramps', 'ache', 'discomfort'],
-      'exercise': ['workout', 'yoga', 'stretching', 'fitness'],
-      'food': ['nutrition', 'diet', 'eating', 'meal'],
+      'nausea': ['morning sickness', 'vomiting', 'sick', 'queasy', 'first trimester sickness'],
+      'swelling': ['edema', 'puffiness', 'bloating', 'leg swelling', 'feet swelling'],
+      'water': ['hydration', 'fluids', 'drinking', 'dehydration', 'thirst'],
+      'stress': ['anxiety', 'mental', 'worry', 'emotional', 'emotional wellness', 'mental wellness'],
+      'pain': ['cramps', 'ache', 'discomfort', 'soreness'],
+      'exercise': ['workout', 'yoga', 'stretching', 'fitness', 'prenatal yoga', 'walking'],
+      'food': ['nutrition', 'diet', 'eating', 'meal', 'meals', 'healthy meals', 'fruits', 'craving'],
+      'baby': ['fetal', 'fetus', 'growth', 'ultrasound', 'development'],
     };
 
     // Expand tokens with synonyms

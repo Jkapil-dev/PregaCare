@@ -24,11 +24,17 @@ class KnowledgeArticleDetailPage extends StatelessWidget {
             foregroundColor: MaatriColors.charcoal,
             flexibleSpace: FlexibleSpaceBar(
               background: article.imageUrl.isNotEmpty
-                  ? Image.network(
-                      article.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
-                    )
+                  ? (article.imageUrl.startsWith('assets/')
+                      ? Image.asset(
+                          article.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+                        )
+                      : Image.network(
+                          article.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+                        ))
                   : _buildImagePlaceholder(),
             ),
           ),
@@ -60,6 +66,31 @@ class KnowledgeArticleDetailPage extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         height: 1.2,
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Trust Badges & Source Row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (article.isMedicallyReviewed) ...[
+                          const Icon(Icons.verified_user_rounded, color: MaatriColors.success, size: 18),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Medically Reviewed',
+                            style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.success, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('•', style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.mediumGray)),
+                          const SizedBox(width: 12),
+                        ],
+                        Icon(Icons.menu_book_rounded, color: MaatriColors.slate, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          article.sourceName,
+                          style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.slate, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     
@@ -98,14 +129,57 @@ class KnowledgeArticleDetailPage extends StatelessWidget {
                       const SizedBox(height: 24),
                     ],
 
-                    // Content
-                    Text(
-                      article.content,
-                      style: MaatriTypography.bodyLarge.copyWith(
-                        color: MaatriColors.charcoal,
-                        height: 1.8,
+                    // Key Takeaways Box
+                    if (article.keyTakeaways.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: MaatriColors.info.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: MaatriColors.info.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.lightbulb_outline_rounded, color: MaatriColors.info, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Key Takeaways',
+                                  style: MaatriTypography.titleMedium.copyWith(color: MaatriColors.infoDark, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ...article.keyTakeaways.map((takeaway) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 6.0),
+                                        child: CircleAvatar(radius: 3, backgroundColor: MaatriColors.info),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          takeaway,
+                                          style: MaatriTypography.bodyMedium.copyWith(color: MaatriColors.charcoal, height: 1.5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 32),
+                    ],
+
+                    // Content
+                    _buildRichContent(article.content),
+                    
                     const SizedBox(height: 64), // Bottom padding
                   ],
                 ),
@@ -164,6 +238,134 @@ class KnowledgeArticleDetailPage extends StatelessWidget {
           color: textColor,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Widget _buildRichContent(String content) {
+    final List<Widget> widgets = [];
+    final lines = content.split('\n');
+    
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trimRight();
+      if (line.isEmpty) {
+        widgets.add(const SizedBox(height: 16));
+        continue;
+      }
+      
+      if (line.startsWith('### ')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 24.0, bottom: 12.0),
+            child: Text(
+              line.substring(4),
+              style: MaatriTypography.titleLarge.copyWith(
+                color: MaatriColors.charcoal,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        );
+      } else if (line.startsWith('- ')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, right: 12.0),
+                  child: CircleAvatar(radius: 3, backgroundColor: MaatriColors.slate),
+                ),
+                Expanded(
+                  child: _parseInlineFormatting(line.substring(2)),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else if (RegExp(r'^\d+\.\s').hasMatch(line)) {
+        final match = RegExp(r'^(\d+\.)\s(.*)').firstMatch(line);
+        if (match != null) {
+          widgets.add(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2.0, right: 8.0),
+                    child: Text(
+                      match.group(1)!,
+                      style: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.slate, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Expanded(
+                    child: _parseInlineFormatting(match.group(2)!),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      } else {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: _parseInlineFormatting(line),
+          ),
+        );
+      }
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: widgets,
+    );
+  }
+
+  Widget _parseInlineFormatting(String text) {
+    // Very simple bold parsing for **text**
+    final RegExp boldExp = RegExp(r'\*\*(.*?)\*\*');
+    final Iterable<RegExpMatch> matches = boldExp.allMatches(text);
+    
+    if (matches.isEmpty) {
+      return Text(
+        text,
+        style: MaatriTypography.bodyLarge.copyWith(
+          color: MaatriColors.charcoal,
+          height: 1.8,
+          fontSize: 16.5,
+        ),
+      );
+    }
+    
+    int currentIndex = 0;
+    final List<TextSpan> spans = [];
+    
+    for (final match in matches) {
+      if (match.start > currentIndex) {
+        spans.add(TextSpan(text: text.substring(currentIndex, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(1),
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ));
+      currentIndex = match.end;
+    }
+    
+    if (currentIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(currentIndex)));
+    }
+    
+    return RichText(
+      text: TextSpan(
+        style: MaatriTypography.bodyLarge.copyWith(
+          color: MaatriColors.charcoal,
+          height: 1.8,
+          fontSize: 16.5,
+        ),
+        children: spans,
       ),
     );
   }

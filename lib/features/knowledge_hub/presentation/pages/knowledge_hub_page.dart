@@ -468,12 +468,19 @@ class _FeaturedArticleCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 child: article.imageUrl.isNotEmpty
-                    ? Image.network(
-                        article.imageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
-                      )
+                    ? (article.imageUrl.startsWith('assets/') 
+                        ? Image.asset(
+                            article.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
+                          )
+                        : Image.network(
+                            article.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
+                          ))
                     : _buildPlaceholder(context),
               ),
             ),
@@ -755,12 +762,19 @@ class _SearchResultCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: article.imageUrl.isNotEmpty
-                    ? Image.network(
-                        article.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.menu_book_rounded, color: Colors.white54),
-                      )
+                    ? (article.imageUrl.startsWith('assets/')
+                        ? Image.asset(
+                            article.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.menu_book_rounded, color: Colors.white54),
+                          )
+                        : Image.network(
+                            article.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.menu_book_rounded, color: Colors.white54),
+                          ))
                     : const Icon(Icons.menu_book_rounded, color: Colors.white54),
               ),
             ),

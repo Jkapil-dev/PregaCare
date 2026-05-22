@@ -15,6 +15,10 @@ class KnowledgeArticle {
   final bool weeklyRecommended;
   final String articleType;
   final String wellnessPriority;
+  final String sourceName;
+  final String sourceUrl;
+  final bool isMedicallyReviewed;
+  final List<String> keyTakeaways;
 
   KnowledgeArticle({
     required this.id,
@@ -31,6 +35,10 @@ class KnowledgeArticle {
     required this.weeklyRecommended,
     required this.articleType,
     required this.wellnessPriority,
+    required this.sourceName,
+    required this.sourceUrl,
+    required this.isMedicallyReviewed,
+    required this.keyTakeaways,
   });
 
   factory KnowledgeArticle.fromFirestore(DocumentSnapshot doc) {
@@ -51,6 +59,10 @@ class KnowledgeArticle {
       weeklyRecommended: data['weeklyRecommended'] as bool? ?? false,
       articleType: data['articleType'] as String? ?? 'article',
       wellnessPriority: data['wellnessPriority'] as String? ?? 'normal',
+      sourceName: data['sourceName'] as String? ?? 'MaatriCare Editorial',
+      sourceUrl: data['sourceUrl'] as String? ?? '',
+      isMedicallyReviewed: data['isMedicallyReviewed'] as bool? ?? false,
+      keyTakeaways: (data['keyTakeaways'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
 
@@ -69,6 +81,10 @@ class KnowledgeArticle {
       'weeklyRecommended': weeklyRecommended,
       'articleType': articleType,
       'wellnessPriority': wellnessPriority,
+      'sourceName': sourceName,
+      'sourceUrl': sourceUrl,
+      'isMedicallyReviewed': isMedicallyReviewed,
+      'keyTakeaways': keyTakeaways,
     };
   }
 }
