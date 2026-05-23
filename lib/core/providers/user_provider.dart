@@ -759,9 +759,28 @@ class UserProvider extends ChangeNotifier {
             await _cancelConnectionSubscription();
           }
         } else {
-          _profile = null;
-          await _cancelSubscriptions();
           debugPrint('UserProvider: Profile document does not exist for $uid');
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null && user.uid == uid) {
+            debugPrint('UserProvider: Auto-creating missing profile for $uid');
+            unawaited(_db.collection('users').doc(uid).set({
+              'uid': uid,
+              'email': user.email ?? '',
+              'displayName': user.displayName ?? '',
+              'role': 'mother',
+              'linkedConnectionId': '',
+              'linkedPartnerUid': '',
+              'linkedMotherUid': '',
+              'onboardingCompleted': false,
+              'createdAt': FieldValue.serverTimestamp(),
+              'pregnancyWeek': 0,
+              'trimester': 1,
+            }, SetOptions(merge: true)));
+            return; // Wait for the next snapshot, keep loading state
+          } else {
+            _profile = null;
+            await _cancelSubscriptions();
+          }
         }
         _hasFetched = true;
         _isLoading = false;

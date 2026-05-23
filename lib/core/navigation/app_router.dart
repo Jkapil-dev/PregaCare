@@ -147,7 +147,16 @@ GoRouter createRouter(AuthProvider authProvider, UserProvider userProvider) {
         return null;
       }
 
-      // 5. If user is on public landing pages or auth pages
+      // 5. If user has a profile but onboarding is incomplete, force them to onboarding setup
+      if (!userProvider.isOnboardingCompleted) {
+        final isAllowedPath = location == AppRoutes.pregnancySetup || location == AppRoutes.auth || location == AppRoutes.onboarding;
+        if (!isAllowedPath) {
+          debugPrint('GoRouter Redirect: Onboarding incomplete for $location. Redirecting to /pregnancy-setup');
+          return AppRoutes.pregnancySetup;
+        }
+      }
+
+      // 6. If user is on public landing pages or auth pages
       if (isOnboarding || isAuth) {
         if (userProvider.isOnboardingCompleted) {
           debugPrint('GoRouter Redirect: Onboarding complete. Routing to /home');

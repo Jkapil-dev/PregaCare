@@ -94,7 +94,7 @@ class DashboardPage extends StatelessWidget {
   Widget _buildGreeting(BuildContext context, String displayName) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
-    return ResponsiveActionRow(
+    return Row(
       children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -647,24 +647,29 @@ class DashboardPage extends StatelessWidget {
   Widget _buildPartnerGreeting(BuildContext context, String partnerName, String motherName) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
-    return ResponsiveActionRow(
+    return Row(
       children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('$greeting,', style: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.slate)),
-          Text(partnerName, style: MaatriTypography.headlineLarge.copyWith(color: MaatriColors.charcoal)),
-          const SizedBox(height: 2),
-          Row(
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(color: MaatriColors.teal, shape: BoxShape.circle),
+              Text('$greeting,', style: MaatriTypography.bodyLarge.copyWith(color: MaatriColors.slate)),
+              Text(partnerName, style: MaatriTypography.headlineLarge.copyWith(color: MaatriColors.charcoal)),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(color: MaatriColors.teal, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 6),
+                  Text('Companion to $motherName', style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.tealDark)),
+                ],
               ),
-              const SizedBox(width: 6),
-              Text('Companion to $motherName', style: MaatriTypography.labelMedium.copyWith(color: MaatriColors.tealDark)),
             ],
           ),
-        ]),
+        ),
         Stack(children: [
           IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_outlined), color: MaatriColors.charcoal),
           Positioned(right: 10, top: 10, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: MaatriColors.coral, shape: BoxShape.circle))),
